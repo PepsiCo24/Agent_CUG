@@ -105,9 +105,20 @@ async def chat_stream(request: ChatRequest):
                 _history_store[conversation_id] = []
             _history_store[conversation_id].append({"role": "user", "content": request.message})
 
-            async for token in agent.run_stream(request.message, conversation_id):
-                full_answer += token
-                yield {"event": "token", "data": token}
+            async for chunk in agent.run_stream(request.message, conversation_id):
+                # 检测是否为 tool_call JSON 事件
+                if chunk.startswith('{"type": "tool_call"'):
+                    try:
+                        tc = json.loads(chunk)
+                        yield {"event": "tool_call", "data": json.dumps({
+                            "name": tc.get("name", "tool"),
+                            "result": tc.get("result", ""),
+                        })}
+                    except json.JSONDecodeError:
+                        pass
+                else:
+                    full_answer += chunk
+                    yield {"event": "token", "data": chunk}
 
             _history_store[conversation_id].append({"role": "assistant", "content": full_answer})
 

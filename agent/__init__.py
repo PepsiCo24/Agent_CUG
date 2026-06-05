@@ -366,7 +366,16 @@ class AgentWorkflow:
 
         messages.append(Message(role="user", content=user_prompt))
 
-        # 流式输出
+        # 流式输出（先发送工具调用信息）
+        if observations:
+            import json as _json
+            for obs in observations:
+                if "]: " in obs:
+                    parts = obs.split("]: ", 1)
+                    tool_name = parts[0].replace("[", "")
+                    tool_result = parts[1]
+                    yield _json.dumps({"type": "tool_call", "name": tool_name, "result": tool_result})
+
         full_answer: str = ""
         async for token in self._llm.chat_stream(messages):
             full_answer += token
