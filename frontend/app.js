@@ -221,8 +221,14 @@
     function startNewChat() {
         conversationId = null;
         messages = [];
-        chatMessages.innerHTML = '';
-        welcomeScreen.style.display = 'flex';
+        // 只移除消息行，保留 welcomeScreen 在 DOM 中
+        chatMessages.querySelectorAll('.message-row').forEach(function (el) { el.remove(); });
+        if (welcomeScreen) {
+            welcomeScreen.style.display = 'flex';
+            if (!welcomeScreen.parentNode) {
+                chatMessages.appendChild(welcomeScreen);
+            }
+        }
         messageInput.value = '';
         messageInput.focus();
         renderHistory();
