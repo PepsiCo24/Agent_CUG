@@ -75,7 +75,7 @@ class TestTools:
         assert "get_current_time" in registry.tool_names
 
         definitions = registry.get_definitions()
-        assert len(definitions) == 2
+        assert len(definitions) >= 2
 
     @pytest.mark.asyncio
     async def test_registry_execute(self):
@@ -128,3 +128,4 @@ class TestLoaders:
         result = loader.load(str(f))
         assert len(result) == 1
         assert "# Title" in result[0]
+

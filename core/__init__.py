@@ -1,4 +1,4 @@
-﻿from core.base import (
+from core.base import (
     # 消息
     Message,
     ChatRequest,
@@ -22,6 +22,18 @@
     BaseReranker,
 )
 
+from core.exceptions import (
+    AgentCUGError,
+    ConfigurationError,
+    LLMError,
+    EmbeddingError,
+    RAGError,
+    MemoryError,
+    ToolError,
+    AgentWorkflowError,
+    ValidationError,
+)
+
 __all__ = [
     "Message",
     "ChatRequest",
@@ -37,4 +49,13 @@ __all__ = [
     "BaseRetriever",
     "Document",
     "BaseReranker",
+    "AgentCUGError",
+    "ConfigurationError",
+    "LLMError",
+    "EmbeddingError",
+    "RAGError",
+    "MemoryError",
+    "ToolError",
+    "AgentWorkflowError",
+    "ValidationError",
 ]

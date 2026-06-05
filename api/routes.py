@@ -1,4 +1,4 @@
-﻿"""
+"""
 API Routes — FastAPI 路由
 """
 from __future__ import annotations
@@ -55,10 +55,17 @@ async def health():
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """聊天接口（同步）"""
+    if not request.message or not request.message.strip():
+        raise HTTPException(status_code=422, detail="消息不能为空")
+
     agent = get_agent()
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
-    result = await agent.run(request.message, conversation_id)
+    try:
+        result = await agent.run(request.message, conversation_id)
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        raise HTTPException(status_code=500, detail=f"处理请求失败: {str(e)}")
 
     # 添加来源信息
     sources: list[dict[str, str]] = []
@@ -79,6 +86,9 @@ async def chat(request: ChatRequest):
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     """聊天接口（流式 SSE）"""
+    if not request.message or not request.message.strip():
+        raise HTTPException(status_code=422, detail="消息不能为空")
+
     agent = get_agent()
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
