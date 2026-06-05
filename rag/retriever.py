@@ -7,7 +7,6 @@ import uuid
 from typing import Any
 
 import chromadb
-from chromadb.config import Settings as ChromaConfig
 
 from config import get_settings
 from core import BaseRetriever, Document
@@ -22,10 +21,7 @@ class ChromaRetriever(BaseRetriever):
         chroma_dir = settings.resolve_path(settings.chroma.PERSIST_DIR)
         chroma_dir.mkdir(parents=True, exist_ok=True)
 
-        self._client = chromadb.PersistentClient(
-            path=str(chroma_dir),
-            settings=ChromaConfig(anonymized_telemetry=False),
-        )
+        self._client = chromadb.PersistentClient(path=str(chroma_dir))
         self._collection = self._client.get_or_create_collection(
             name=settings.chroma.COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
