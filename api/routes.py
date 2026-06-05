@@ -67,6 +67,12 @@ async def chat(request: ChatRequest):
         logger.error(f"Chat error: {e}")
         raise HTTPException(status_code=500, detail=f"处理请求失败: {str(e)}")
 
+    # 保存到历史存储
+    if conversation_id not in _history_store:
+        _history_store[conversation_id] = []
+    _history_store[conversation_id].append({"role": "user", "content": request.message})
+    _history_store[conversation_id].append({"role": "assistant", "content": result.get("final_answer", "")})
+
     # 添加来源信息
     sources: list[dict[str, str]] = []
     if result.get("retrieved_docs"):
@@ -95,9 +101,16 @@ async def chat_stream(request: ChatRequest):
     async def event_generator():
         full_answer = ""
         try:
+            if conversation_id not in _history_store:
+                _history_store[conversation_id] = []
+            _history_store[conversation_id].append({"role": "user", "content": request.message})
+
             async for token in agent.run_stream(request.message, conversation_id):
                 full_answer += token
                 yield {"event": "token", "data": token}
+
+            _history_store[conversation_id].append({"role": "assistant", "content": full_answer})
+
             yield {"event": "done", "data": json.dumps({
                 "conversation_id": conversation_id,
                 "full_answer": full_answer,
