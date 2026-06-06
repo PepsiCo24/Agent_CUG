@@ -198,12 +198,11 @@ html, body {
     margin: 0 auto; padding: 24px 40px;
     display: flex; width: 100%; min-width: 0;
     position: relative;
-    border-bottom: 1px solid var(--border-light);
     animation: fadeIn 0.2s ease;
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-.message-row.user { background: var(--surface-primary); }
+
 .message-row.assistant { background: var(--surface-secondary); }
 .message-row.tool { background: rgba(171, 104, 255, 0.04); }
 
@@ -519,3 +518,22 @@ html, body {
 .custom-modal-btn.danger:hover { background: #dc2626; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+
+/* ====== Message actions (copy) ====== */
+.message-actions {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 12px; padding-top: 8px;
+}
+.message-copy-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); background: transparent;
+    color: var(--text-tertiary); font-size: 12px; cursor: pointer;
+    transition: all var(--transition);
+}
+.message-copy-btn:hover {
+    background: var(--surface-secondary); color: var(--text-primary);
+    border-color: var(--text-tertiary);
+}
+.message-copy-btn.copied { color: #4ade80; border-color: #4ade80; }

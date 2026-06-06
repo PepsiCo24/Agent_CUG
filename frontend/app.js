@@ -465,6 +465,28 @@
         if (content) contentDiv.innerHTML = renderMarkdown(content);
         inner.appendChild(avatar);
         inner.appendChild(contentDiv);
+        // Copy button for assistant/tool messages
+        if (role === "assistant" || role === "tool") {
+            var actionsDiv = document.createElement("div");
+            actionsDiv.className = "message-actions";
+            var copyBtn = document.createElement("button");
+            copyBtn.className = "message-copy-btn";
+            copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>复制</span>';
+            copyBtn.addEventListener("click", function () {
+                var txt = contentDiv.textContent || "";
+                copyToClipboard(txt).then(function () {
+                    copyBtn.classList.add("copied");
+                    copyBtn.querySelector("span").textContent = "✓ 已复制";
+                    setTimeout(function () {
+                        copyBtn.classList.remove("copied");
+                        copyBtn.querySelector("span").textContent = "复制";
+                    }, 2000);
+                });
+            });
+            actionsDiv.appendChild(copyBtn);
+            inner.appendChild(actionsDiv);
+        }
+
         row.appendChild(inner);
         chatMessages.appendChild(row);
         scrollToBottom();
