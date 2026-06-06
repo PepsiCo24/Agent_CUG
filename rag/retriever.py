@@ -1,4 +1,4 @@
-﻿"""
+"""
 RAG 检索器 — 基于 Chroma 的向量检索
 """
 from __future__ import annotations
@@ -13,20 +13,33 @@ from core import BaseRetriever, Document
 from embedding import create_embedding
 
 
-class ChromaRetriever(BaseRetriever):
-    """Chroma 向量检索器"""
+# ?????ChromaDB ??????
+_global_client: chromadb.PersistentClient | None = None
+_global_collection: chromadb.Collection | None = None
 
-    def __init__(self) -> None:
+
+def _get_chroma_collection() -> chromadb.Collection:
+    """??????? ChromaDB ????????"""
+    global _global_client, _global_collection
+    if _global_collection is None:
         settings = get_settings()
         chroma_dir = settings.resolve_path(settings.chroma.PERSIST_DIR)
         chroma_dir.mkdir(parents=True, exist_ok=True)
-
-        self._client = chromadb.PersistentClient(path=str(chroma_dir))
-        self._collection = self._client.get_or_create_collection(
+        _global_client = chromadb.PersistentClient(path=str(chroma_dir))
+        _global_collection = _global_client.get_or_create_collection(
             name=settings.chroma.COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
         )
+    return _global_collection
+
+
+class ChromaRetriever(BaseRetriever):
+    """Chroma ?????"""
+
+    def __init__(self) -> None:
+        self._collection = _get_chroma_collection()
         self._embedding_fn = create_embedding()
+
 
     async def retrieve(
         self, query: str, top_k: int = 5

@@ -33,10 +33,32 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
-# 简单的内存历史存储（生产环境应使用 SQLite）
-_history_store: dict[str, list[dict]] = {}
+# ???????????? + ?????
+HISTORY_FILE = Path("./data/history.json")
+HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-# 上传目录
+
+def _load_history_store() -> dict[str, list[dict]]:
+    """?????????"""
+    if HISTORY_FILE.exists():
+        try:
+            return json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"????????: {e}")
+    return {}
+
+
+def _save_history_store(store: dict[str, list[dict]]) -> None:
+    """?????????"""
+    try:
+        HISTORY_FILE.write_text(json.dumps(store, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError as e:
+        logger.error(f"????????: {e}")
+
+
+_history_store: dict[str, list[dict]] = _load_history_store()
+
+# ????
 UPLOAD_DIR = Path("./data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -72,6 +94,7 @@ async def chat(request: ChatRequest):
         _history_store[conversation_id] = []
     _history_store[conversation_id].append({"role": "user", "content": request.message})
     _history_store[conversation_id].append({"role": "assistant", "content": result.get("final_answer", "")})
+    _save_history_store(_history_store)
 
     # 添加来源信息
     sources: list[dict[str, str]] = []
@@ -103,6 +126,7 @@ async def chat_stream(request: ChatRequest):
         try:
             if conversation_id not in _history_store:
                 _history_store[conversation_id] = []
+                _save_history_store(_history_store)
             _history_store[conversation_id].append({"role": "user", "content": request.message})
 
             async for chunk in agent.run_stream(request.message, conversation_id):
@@ -121,6 +145,7 @@ async def chat_stream(request: ChatRequest):
                     yield {"event": "token", "data": chunk}
 
             _history_store[conversation_id].append({"role": "assistant", "content": full_answer})
+            _save_history_store(_history_store)
 
             yield {"event": "done", "data": json.dumps({
                 "conversation_id": conversation_id,
@@ -184,11 +209,18 @@ async def get_history():
     conversations: list[HistoryItem] = []
 
     if _history_store:
-        for conv_id, messages in _history_store.items():
-            title = "新对话"
-            if messages:
+        for conv_id, entry in _history_store.items():
+            if isinstance(entry, dict) and "messages" in entry:
+                messages = entry["messages"]
+                title = entry.get("title") or ""
+            else:
+                messages = entry
+                title = ""
+            if not title and messages:
                 first_msg = messages[0]
                 title = first_msg.get("content", "新对话")[:30]
+            if not title:
+                title = "新对话"
             conversations.append(HistoryItem(
                 id=conv_id,
                 title=title,
@@ -199,11 +231,45 @@ async def get_history():
     return HistoryResponse(conversations=conversations)
 
 
+@router.get("/history/{conversation_id}")
+async def get_conversation(conversation_id: str):
+    """获取指定会话的消息"""
+    if conversation_id not in _history_store:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    entry = _history_store[conversation_id]
+    if isinstance(entry, dict) and "messages" in entry:
+        messages = entry["messages"]
+    else:
+        messages = entry
+    return {
+        "conversation_id": conversation_id,
+        "messages": messages,
+    }
+
+
+@router.put("/history/{conversation_id}/title")
+async def rename_history(conversation_id: str, body: dict):
+    """重命名对话"""
+    if conversation_id not in _history_store:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    new_title = body.get("title", "").strip()
+    if not new_title:
+        raise HTTPException(status_code=422, detail="标题不能为空")
+    entry = _history_store[conversation_id]
+    if isinstance(entry, dict) and "messages" in entry:
+        entry["title"] = new_title
+    else:
+        _history_store[conversation_id] = {"messages": entry, "title": new_title}
+    _save_history_store(_history_store)
+    return {"status": "ok", "title": new_title}
+
+
 @router.delete("/history/{conversation_id}")
 async def delete_history(conversation_id: str):
     """删除对话历史"""
     if conversation_id in _history_store:
         del _history_store[conversation_id]
+        _save_history_store(_history_store)
         return {"status": "ok"}
     raise HTTPException(status_code=404, detail="会话不存在")
 
