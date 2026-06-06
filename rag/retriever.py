@@ -36,6 +36,20 @@ def _get_chroma_collection() -> chromadb.Collection:
 class ChromaRetriever(BaseRetriever):
     """Chroma ?????"""
 
+
+    async def _retry_operation(self, operation, max_retries=3, *args, **kwargs):
+        """带重试的操作包装"""
+        import asyncio
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                return await operation(*args, **kwargs)
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(0.5 * (2 ** attempt))
+        raise last_error
+
     def __init__(self) -> None:
         self._collection = _get_chroma_collection()
         self._embedding_fn = create_embedding()
@@ -94,6 +108,17 @@ class ChromaRetriever(BaseRetriever):
         """删除文档"""
         if doc_ids:
             self._collection.delete(ids=doc_ids)
+    async def clear_all(self) -> int:
+        """清除所有文档"""
+        try:
+            count = self._collection.count()
+            if count > 0:
+                ids = self._collection.get()["ids"]
+                self._collection.delete(ids=ids)
+            return count
+        except Exception:
+            return 0
+
 
     @property
     def count(self) -> int:

@@ -75,3 +75,13 @@ ROUTER_PROMPT = """分析用户输入，判断下一步操作：
 用户输入: {user_input}
 
 只回复一个词: rag, tool, 或 chat"""
+
+# 简单对话 Prompt
+CHAT_PROMPT_TEMPLATE = """你是 Agent_CUG，一个智能助手。
+## 历史对话
+{history}
+
+## 当前问题
+{question}
+
+请用中文回答用户的问题。"""

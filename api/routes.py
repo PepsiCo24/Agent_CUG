@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+import traceback
 import os
 import uuid
 from datetime import datetime, timezone
@@ -66,11 +67,16 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 @router.get("/health", response_model=HealthResponse)
 async def health():
     """健康检查"""
+    import time
+    start = time.time()
     rag = RAGPipeline()
+    doc_count = rag.document_count
+    elapsed = round((time.time() - start) * 1000, 2)
     return HealthResponse(
         status="ok",
         version="1.0.0",
-        document_count=rag.document_count,
+        document_count=doc_count,
+        metadata={"response_ms": elapsed},
     )
 
 

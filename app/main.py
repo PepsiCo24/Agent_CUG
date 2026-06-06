@@ -48,6 +48,14 @@ async def lifespan(app: FastAPI):
     logger.info("LLM Provider: %s", get_settings().MODEL_PROVIDER)
     logger.info("LLM Model: %s", get_settings().llm.MODEL)
     yield
+    logger.info("Agent_CUG 正在关闭...")
+    try:
+        from memory import MemoryManager
+        manager = MemoryManager()
+        await manager.cleanup_expired()
+        logger.info("Memory 清理完成")
+    except Exception as e:
+        logger.warning(f"Memory 清理失败: {e}")
     logger.info("Agent_CUG 关闭")
 
 
@@ -118,15 +126,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info("Agent_CUG shutting down...")
-    try:
-        from memory import MemoryManager
-        manager = MemoryManager()
-        await manager.cleanup_expired()
-    except Exception as e:
-        logger.warning(f"Memory cleanup failed: {e}")

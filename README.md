@@ -160,3 +160,19 @@ Agent_CUG/
 ## 📝 License
 
 MIT © 2026 Agent_CUG
+
+
+## 更新日志
+
+### v1.1.0 (2026-06)
+- LLM 调用增加自动重试机制
+- ChromaDB 全局单例模式，避免重复创建客户端
+- RAGPipeline 单例模式
+- MemoryManager 共享 Chroma 连接
+- 历史记录持久化到 JSON 文件
+- 前端增强：删除/重命名对话、自动滚动、暗色模式检测、Ctrl+Enter 快捷键
+- 优雅关闭机制
+- 配置验证
+- 会话导出 API
+- 工具使用统计
+- 更多单元测试和集成测试覆盖

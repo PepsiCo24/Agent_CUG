@@ -123,6 +123,11 @@ class RAGPipeline:
         context = "\n\n---\n\n".join(context_parts)
         return context, docs
 
+    @classmethod
+    def reset_instance(cls) -> None:
+        """重置单例（用于测试）"""
+        cls._instance = None
+
     @property
     def document_count(self) -> int:
         return self._retriever.count

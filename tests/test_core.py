@@ -112,6 +112,45 @@ class TestChunker:
             assert r["metadata"]["source"] == "test"
 
 
+
+
+class TestMemorySingleton:
+    """测试 MemoryManager 全局单例模式"""
+    @pytest.mark.asyncio
+    async def test_memory_singleton(self):
+        """验证 MemoryManager 共享 Chroma 客户端"""
+        from memory import MemoryManager
+        m1 = MemoryManager()
+        m2 = MemoryManager()
+        await m1._ensure_chroma()
+        await m2._ensure_chroma()
+        # After initialization, both should share same chroma collection
+        assert m1._chroma_ready
+        assert m2._chroma_ready
+        assert m1._chroma_client is m2._chroma_client
+
+    @pytest.mark.asyncio
+    async def test_memory_add_and_retrieve(self):
+        """验证记忆添加和检索"""
+        from memory import MemoryManager
+        m = MemoryManager()
+        item = MemoryItem(id="", content="test memory content", role="user")
+        mid = await m.add(item)
+        assert mid
+
+        results = await m.get_recent(limit=5)
+        assert len(results) > 0
+
+
+class TestRAGSingleton:
+    """测试 RAGPipeline 单例"""
+    def test_rag_singleton(self):
+        from rag import RAGPipeline
+        p1 = RAGPipeline()
+        p2 = RAGPipeline()
+        assert p1 is p2
+
+
 class TestLoaders:
     def test_text_loader(self, tmp_path):
         f = tmp_path / "test.txt"
@@ -129,3 +168,49 @@ class TestLoaders:
         assert len(result) == 1
         assert "# Title" in result[0]
 
+
+
+class TestLLMRetry:
+    """测试 LLM 重试逻辑"""
+    @pytest.mark.asyncio
+    async def test_llm_retry_on_failure(self):
+        from unittest.mock import AsyncMock, patch
+        from llm import OpenAICompatibleLLM
+        llm = OpenAICompatibleLLM(api_key="test", api_base="http://test", model="test")
+        llm._client = AsyncMock()
+        llm._client.chat.completions.create = AsyncMock()
+
+        # 前两次失败，第三次成功
+        from openai.types.chat import ChatCompletion, ChatCompletionMessage
+        from openai.types.chat.chat_completion import Choice
+
+        mock_msg = AsyncMock()
+        mock_msg.content = "success"
+        mock_msg.tool_calls = None
+
+        mock_choice = AsyncMock()
+        mock_choice.message = mock_msg
+
+        mock_resp = AsyncMock()
+        mock_resp.choices = [mock_choice]
+
+        llm._client.chat.completions.create.side_effect = [
+            Exception("fail1"),
+            Exception("fail2"),
+            mock_resp,
+        ]
+        from core import Message
+        result = await llm.chat([Message(role="user", content="test")])
+        assert result.content == "success"
+        assert llm._client.chat.completions.create.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_llm_retry_exhausted(self):
+        from unittest.mock import AsyncMock
+        from llm import OpenAICompatibleLLM
+        llm = OpenAICompatibleLLM(api_key="test", api_base="http://test", model="test")
+        llm._client = AsyncMock()
+        llm._client.chat.completions.create = AsyncMock(side_effect=Exception("always fails"))
+        from core import Message
+        with pytest.raises(RuntimeError, match="LLM调用失败"):
+            await llm.chat([Message(role="user", content="test")])

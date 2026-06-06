@@ -36,6 +36,14 @@
     var messages = [];
     var conversations = [];
 
+    
+    // ====== 暗色模式检测 ======
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+    if (prefersDark.matches) document.body.classList.add("dark-mode");
+    prefersDark.addEventListener("change", function(e) {
+        document.body.classList.toggle("dark-mode", e.matches);
+    });
+
     // ====== 初始化 ======
     function init() {
         loadConfig();
@@ -346,6 +354,15 @@
         isStreaming = false;
         sendBtn.disabled = false;
         messageInput.focus();
+
+    // ====== 键盘快捷键 ======
+    messageInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
         scrollToBottom();
     }
 

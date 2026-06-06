@@ -152,3 +152,9 @@ def validate_settings() -> list[str]:
             warnings.append(f"无法创建 ChromaDB 目录 {chroma_dir}: {e}")
 
     return warnings
+
+def mask_api_key(key: str) -> str:
+    """遮蔽 API Key 显示"""
+    if not key or len(key) < 8:
+        return "***"
+    return key[:4] + "***" + key[-4:]

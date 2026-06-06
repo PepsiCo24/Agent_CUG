@@ -40,7 +40,19 @@ class OpenAICompatibleEmbedding(BaseEmbedding):
             return 1536  # OpenAI 默认
         return self._dimension
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
+    async def embed(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
+        """批量嵌入（支持分批处理避免超时）"""
+        if not texts:
+            return []
+        all_embeddings: list[list[float]] = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            resp = await self._client.embeddings.create(
+                model=self._model,
+                input=batch,
+            )
+            all_embeddings.extend([d.embedding for d in resp.data])
+        return all_embeddings
         """批量文本向量化"""
         if not texts:
             return []

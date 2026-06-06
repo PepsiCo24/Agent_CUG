@@ -295,6 +295,7 @@ class ToolRegistry:
 
     def __init__(self) -> None:
         self._tools: dict[str, BaseTool] = {}
+        self._usage_count: dict[str, int] = {}
 
     def register(self, tool: BaseTool) -> None:
         self._tools[tool.definition.name] = tool
@@ -329,7 +330,9 @@ class ToolRegistry:
                 success=False, output="", error=f"未知工具: {name}"
             )
         try:
-            return await tool.execute(**kwargs)
+            result = await tool.execute(**kwargs)
+            self._usage_count[name] = self._usage_count.get(name, 0) + 1
+            return result
         except Exception as e:
             logger.error(f"工具 [{name}] 执行异常: {e}")
             return ToolResult(
@@ -343,6 +346,10 @@ class ToolRegistry:
     @property
     def count(self) -> int:
         return len(self._tools)
+
+    def get_usage_stats(self) -> dict[str, int]:
+        """获取工具使用统计"""
+        return dict(self._usage_count)
 
 
 # ============================================================

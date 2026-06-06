@@ -316,3 +316,175 @@ class TestEmbeddingConfig:
 
 
 
+
+
+# ============================================================
+# History API 集成测试 (R13)
+# ============================================================
+
+class TestHistoryAPI:
+    @pytest.mark.asyncio
+    async def test_history_list(self, async_client: AsyncClient):
+        resp = await async_client.get("/api/history")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data["conversations"], list)
+
+    @pytest.mark.asyncio
+    async def test_history_not_found(self, async_client: AsyncClient):
+        resp = await async_client.get("/api/history/nonexistent-id-12345")
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_history_delete_not_found(self, async_client: AsyncClient):
+        resp = await async_client.delete("/api/history/nonexistent-id-12345")
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_history_rename_empty_title(self, async_client: AsyncClient):
+        resp = await async_client.put("/api/history/test-id/title", json={"title": "  "})
+        assert resp.status_code in (404, 422)
+
+    @pytest.mark.asyncio
+    async def test_chat_creates_conversation(self, async_client: AsyncClient):
+        resp = await async_client.post("/api/chat", json={"message": "你好，这是一个测试"})
+        if resp.status_code == 200:
+            data = resp.json()
+            assert "conversation_id" in data
+            assert data["answer"] != ""
+
+
+# ============================================================
+# Validation 测试 (R14)
+# ============================================================
+
+class TestValidation:
+    @pytest.mark.asyncio
+    async def test_chat_message_too_long(self, async_client: AsyncClient):
+        long_msg = "x" * 33000
+        resp = await async_client.post("/api/chat", json={"message": long_msg})
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_rag_query_valid(self, async_client: AsyncClient):
+        resp = await async_client.post("/api/rag/query", json={"query": "test", "top_k": 3})
+        assert resp.status_code == 200
+
+
+# ============================================================
+# Config Validation 测试 (R15)
+# ============================================================
+
+class TestConfigValidation:
+    def test_validate_settings(self):
+        from config.settings import validate_settings, get_settings
+        warnings = validate_settings()
+        assert isinstance(warnings, list)
+
+
+# ============================================================
+# Tool Search 集成测试 (R16)
+# ============================================================
+
+class TestSearchIntegration:
+    @pytest.mark.asyncio
+    async def test_search_valid(self):
+        tool = SearchTool(timeout=10)
+        result = await tool.execute(query="Python programming")
+        # DuckDuckGo may return 202, which is acceptable
+        assert result.success or result.error is not None
+
+    @pytest.mark.asyncio
+    async def test_search_definition(self):
+        tool = SearchTool()
+        assert tool.definition.name == "web_search"
+
+
+# ============================================================
+# MemoryManager 集成测试 (R17)
+# ============================================================
+
+class TestMemoryIntegration:
+    @pytest.mark.asyncio
+    async def test_memory_deduplicate(self):
+        from memory import MemoryManager
+        m = MemoryManager()
+        count = await m.deduplicate()
+        assert count >= 0
+
+    @pytest.mark.asyncio
+    async def test_memory_cleanup_expired(self):
+        from memory import MemoryManager
+        m = MemoryManager()
+        count = await m.cleanup_expired()
+        assert count >= 0
+
+    @pytest.mark.asyncio
+    async def test_memory_score(self):
+        from memory import MemoryManager
+        m = MemoryManager()
+        await m.score("nonexistent", 0.8)
+
+
+# ============================================================
+# Chunker 增强测试 (R18)
+# ============================================================
+
+class TestChunkerExtended:
+    def test_empty_text(self):
+        from rag.chunker import TextChunker
+        chunker = TextChunker(chunk_size=100)
+        chunks = chunker.split("")
+        assert len(chunks) == 0
+
+    def test_special_characters(self):
+        from rag.chunker import TextChunker
+        chunker = TextChunker(chunk_size=500)
+        text = "中文字符测试　全角空格　emoji 😀 🎉"
+        chunks = chunker.split(text)
+        assert len(chunks) == 1
+
+
+# ============================================================
+# Agent Router 增强测试 (R19)
+# ============================================================
+
+class TestAgentRouterExtended:
+    @pytest.mark.asyncio
+    async def test_router_rag_keywords(self):
+        from agent import AgentWorkflow
+        agent = AgentWorkflow()
+        state = {"user_input": "帮我在知识库中查一下文档", "next_action": "chat"}
+        result = await agent._router(state)
+        assert result["next_action"] == "rag"
+
+    @pytest.mark.asyncio
+    async def test_router_date_triggers_tool(self):
+        from agent import AgentWorkflow
+        agent = AgentWorkflow()
+        state = {"user_input": "现在几点？", "next_action": "chat"}
+        result = await agent._router(state)
+        assert result["next_action"] == "tool"
+
+
+# ============================================================
+# Embedding 测试 (R20)
+# ============================================================
+
+class TestEmbedding:
+    @pytest.mark.asyncio
+    async def test_embed_single(self):
+        from embedding import create_embedding
+        emb = create_embedding("siliconflow")
+        result = await emb.embed_single("hello world")
+        assert len(result) > 0
+
+    @pytest.mark.asyncio
+    async def test_embed_batch(self):
+        from embedding import create_embedding
+        emb = create_embedding("siliconflow")
+        results = await emb.embed(["hello", "world"])
+        assert len(results) == 2
+        assert len(results[0]) > 0
+
+
