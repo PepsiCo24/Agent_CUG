@@ -94,14 +94,17 @@ html, body {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 12px; margin: 2px 8px; border-radius: var(--radius-md);
     cursor: pointer; font-size: 13px; color: var(--text-secondary);
-    transition: all var(--transition); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: all var(--transition); position: relative;
 }
 .history-item:hover { background: var(--surface-secondary); color: var(--text-primary); }
 .history-item.active { background: var(--surface-secondary); color: var(--text-primary); }
 
 /* History item actions */
 .history-item-main {
-    flex: 1; overflow: hidden; min-width: 0;
+    flex: 1; overflow: hidden; min-width: 0; margin-right: 8px;
+}
+.history-item .history-title {
+    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .history-item .history-title {
     display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -110,10 +113,10 @@ html, body {
     display: block; font-size: 11px; color: var(--text-tertiary); margin-top: 2px;
 }
 .history-actions {
-    display: none; gap: 4px; margin-left: 8px; flex-shrink: 0;
+    display: flex; gap: 4px; flex-shrink: 0; opacity: 0.6; transition: opacity var(--transition);
 }
 .history-item:hover .history-actions {
-    display: flex;
+    opacity: 1;
 }
 .history-action-btn {
     padding: 4px; border: none; background: transparent; color: var(--text-tertiary);
@@ -447,4 +450,25 @@ html, body {
     .sidebar.collapsed { left: -260px; }
     .message-row { padding: 16px; }
     .chat-input-area { padding: 0 12px 12px; }
+}
+
+/* Right-click context menu */
+.context-menu {
+    position: fixed; z-index: 1000; background: var(--surface-primary);
+    border: 1px solid var(--border-light); border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3); min-width: 140px; padding: 4px;
+}
+.context-menu-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    border-radius: var(--radius-sm); cursor: pointer; font-size: 13px;
+    color: var(--text-primary); transition: background var(--transition);
+}
+.context-menu-item:hover {
+    background: var(--surface-secondary);
+}
+.context-menu-item.danger {
+    color: #ef4444;
+}
+.context-menu-item.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
 }
