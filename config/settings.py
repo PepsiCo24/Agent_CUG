@@ -130,3 +130,25 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
+
+
+def validate_settings() -> list[str]:
+    """验证配置完整性，返回警告列表"""
+    warnings = []
+    s = get_settings()
+
+    if not s.llm.API_KEY or s.llm.API_KEY.startswith("your-"):
+        warnings.append("LLM API Key 未配置，请在 .env 文件中设置 LLM_API_KEY")
+
+    if s.llm.API_BASE == "https://api.openai.com/v1" and s.MODEL_PROVIDER not in ("openai",):
+        warnings.append(f"当前 provider={s.MODEL_PROVIDER}，但 API Base 仍是 OpenAI 默认值")
+
+    # Check data paths
+    chroma_dir = s.resolve_path(s.chroma.PERSIST_DIR)
+    if not chroma_dir.exists():
+        try:
+            chroma_dir.mkdir(parents=True)
+        except Exception as e:
+            warnings.append(f"无法创建 ChromaDB 目录 {chroma_dir}: {e}")
+
+    return warnings

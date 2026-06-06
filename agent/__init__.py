@@ -112,7 +112,7 @@ class AgentWorkflow:
         input_lower = user_input.lower().strip()
 
         # RAG 关键词
-        rag_keywords = ["文档", "资料", "知识库", "文件", "检索", "搜索资料"]
+        rag_keywords = ["文档", "资料", "知识库", "文件", "检索", "搜索资料", "rag", "RAG"]
         if any(kw in input_lower for kw in rag_keywords):
             state["next_action"] = "rag"
             return state

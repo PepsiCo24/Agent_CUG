@@ -5,6 +5,8 @@ LLM Adapter — 统一 LLM 接口实现
 """
 from __future__ import annotations
 
+import asyncio
+import logging
 import json
 from typing import Any, AsyncIterator
 
@@ -13,6 +15,8 @@ from openai import AsyncOpenAI
 from config import get_settings
 from core import BaseLLM, Message
 
+
+logger = logging.getLogger(__name__)
 
 class OpenAICompatibleLLM(BaseLLM):
     """OpenAI 兼容协议 LLM 实现"""
@@ -45,17 +49,30 @@ class OpenAICompatibleLLM(BaseLLM):
         messages: list[Message],
         **kwargs: Any,
     ) -> Message:
-        """同步聊天"""
+        """同步聊天（带重试）"""
         formatted = self._format_messages(messages)
+        max_retries = kwargs.pop("max_retries", 3)
+        retry_delay = kwargs.pop("retry_delay", 1.0)
 
-        response = await self._client.chat.completions.create(
-            model=self._model,
-            messages=formatted,
-            max_tokens=kwargs.get("max_tokens", self._max_tokens),
-            temperature=kwargs.get("temperature", self._temperature),
-            tools=kwargs.get("tools"),
-            tool_choice=kwargs.get("tool_choice", "auto"),
-        )
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                response = await self._client.chat.completions.create(
+                    model=self._model,
+                    messages=formatted,
+                    max_tokens=kwargs.get("max_tokens", self._max_tokens),
+                    temperature=kwargs.get("temperature", self._temperature),
+                    tools=kwargs.get("tools"),
+                    tool_choice=kwargs.get("tool_choice", "auto"),
+                )
+                break
+            except Exception as e:
+                last_error = e
+                logger.warning(f"LLM调用失败 (尝试 {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay * (2 ** attempt))
+                else:
+                    raise RuntimeError(f"LLM调用失败（已重试{max_retries}次）: {last_error}") from last_error
 
         choice = response.choices[0]
         msg = choice.message
@@ -75,16 +92,29 @@ class OpenAICompatibleLLM(BaseLLM):
         messages: list[Message],
         **kwargs: Any,
     ) -> AsyncIterator[str]:
-        """流式聊天"""
+        """流式聊天（带重试）"""
         formatted = self._format_messages(messages)
+        max_retries = kwargs.pop("max_retries", 2)
+        retry_delay = kwargs.pop("retry_delay", 0.5)
 
-        stream = await self._client.chat.completions.create(
-            model=self._model,
-            messages=formatted,
-            max_tokens=kwargs.get("max_tokens", self._max_tokens),
-            temperature=kwargs.get("temperature", self._temperature),
-            stream=True,
-        )
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                stream = await self._client.chat.completions.create(
+                    model=self._model,
+                    messages=formatted,
+                    max_tokens=kwargs.get("max_tokens", self._max_tokens),
+                    temperature=kwargs.get("temperature", self._temperature),
+                    stream=True,
+                )
+                break
+            except Exception as e:
+                last_error = e
+                logger.warning(f"LLM流式调用失败 (尝试 {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay * (2 ** attempt))
+                else:
+                    raise RuntimeError(f"LLM流式调用失败（已重试{max_retries}次）: {last_error}") from last_error
 
         async for chunk in stream:
             if chunk.choices and chunk.choices[0].delta.content:

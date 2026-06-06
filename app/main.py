@@ -118,3 +118,15 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Agent_CUG shutting down...")
+    try:
+        from memory import MemoryManager
+        manager = MemoryManager()
+        await manager.cleanup_expired()
+    except Exception as e:
+        logger.warning(f"Memory cleanup failed: {e}")

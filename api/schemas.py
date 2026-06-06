@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 class ChatRequest(BaseModel):
     """聊天请求"""
-    message: str = Field(..., description="用户消息")
+    message: str = Field(..., min_length=1, max_length=32000, description="用户消息")
     conversation_id: str | None = Field(None, description="会话 ID")
 
 

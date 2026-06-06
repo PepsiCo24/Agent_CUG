@@ -20,8 +20,17 @@ class RAGPipeline:
     RAG 流水线：
     Document Loader → Chunking → Embedding → Chroma → Retriever → Reranker
     """
+    _instance: "RAGPipeline | None" = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
 
     def __init__(self) -> None:
+        if self._initialized:
+            return
         settings = get_settings()
         self._chunker = TextChunker(
             chunk_size=settings.rag.CHUNK_SIZE,
@@ -30,6 +39,7 @@ class RAGPipeline:
         self._retriever = ChromaRetriever()
         self._reranker = KeywordReranker()
         self._rerank_enabled = settings.rag.RERANK_ENABLED
+        self._initialized = True
         self._top_k = settings.rag.TOP_K
 
     async def ingest_file(

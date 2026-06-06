@@ -13,6 +13,11 @@ from config import get_settings
 from core import BaseMemory, MemoryItem
 
 
+# 全局 ChromaDB 单例（避免重复创建 PersistentClient）
+_global_memory_chroma_client = None
+_global_memory_chroma_collection = None
+_global_memory_embedding_fn = None
+
 class MemoryManager(BaseMemory):
     """
     统一记忆管理器
@@ -69,23 +74,29 @@ class MemoryManager(BaseMemory):
         self._conn.commit()
 
     async def _ensure_chroma(self) -> None:
-        """延迟初始化 Chroma"""
+        """延迟初始化 Chroma（使用全局单例避免重复创建）"""
+        global _global_memory_chroma_client, _global_memory_chroma_collection, _global_memory_embedding_fn
+
         if self._chroma_ready:
             return
 
         import chromadb
         from embedding import create_embedding
 
-        settings = get_settings()
-        chroma_dir = settings.resolve_path(settings.chroma.PERSIST_DIR)
-        chroma_dir.mkdir(parents=True, exist_ok=True)
+        if _global_memory_chroma_collection is None:
+            settings = get_settings()
+            chroma_dir = settings.resolve_path(settings.chroma.PERSIST_DIR)
+            chroma_dir.mkdir(parents=True, exist_ok=True)
+            _global_memory_chroma_client = chromadb.PersistentClient(path=str(chroma_dir))
+            _global_memory_chroma_collection = _global_memory_chroma_client.get_or_create_collection(
+                name="agent_cug_memory",
+                metadata={"hnsw:space": "cosine"},
+            )
+            _global_memory_embedding_fn = create_embedding()
 
-        self._chroma_client = chromadb.PersistentClient(path=str(chroma_dir))
-        self._chroma_collection = self._chroma_client.get_or_create_collection(
-            name="agent_cug_memory",
-            metadata={"hnsw:space": "cosine"},
-        )
-        self._embedding_fn = create_embedding()
+        self._chroma_client = _global_memory_chroma_client
+        self._chroma_collection = _global_memory_chroma_collection
+        self._embedding_fn = _global_memory_embedding_fn
         self._chroma_ready = True
 
     # ---- Short-Term Memory ----
