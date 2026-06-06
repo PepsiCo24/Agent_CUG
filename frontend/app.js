@@ -45,6 +45,23 @@
     });
 
     // ====== 初始化 ======
+    // Theme toggle
+    var themeToggleBtn = null;
+    function getTheme() {
+        var s = localStorage.getItem("agent_cug_theme");
+        if (s === "light" || s === "dark") return s;
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    function setTheme(t) {
+        document.documentElement.setAttribute("data-theme", t);
+        localStorage.setItem("agent_cug_theme", t);
+    }
+    function toggleTheme() {
+        var c = getTheme();
+        setTheme(c === "dark" ? "light" : "dark");
+    }
+    setTheme(getTheme());
+
     function init() {
         loadConfig();
         loadHistory();
@@ -153,7 +170,9 @@
                 this.classList.add("active");
             });
         }
-        newChatBtn.addEventListener("click", startNewChat);
+        themeToggleBtn = document.getElementById("themeToggleBtn");
+        if (themeToggleBtn) themeToggleBtn.addEventListener("click", toggleTheme);
+                newChatBtn.addEventListener("click", startNewChat);
         sendBtn.addEventListener("click", sendMessage);
         messageInput.addEventListener("keydown", function (e) {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
