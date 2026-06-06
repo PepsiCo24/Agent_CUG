@@ -1,4 +1,18 @@
 /
+
+/* ====== Light Theme ====== */
+[data-theme="light"] {
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-tertiary: #8e8e8e;
+    --surface-primary: #ffffff;
+    --surface-secondary: #f7f7f8;
+    --surface-tertiary: #ececf1;
+    --border-light: rgba(0,0,0,0.08);
+    --border-medium: rgba(0,0,0,0.12);
+    --border-strong: rgba(0,0,0,0.18);
+}
+
 /* ChatGPT-style: user right, assistant left */
 .message-row.user .message-inner {
     flex-direction: row-reverse;
@@ -551,3 +565,23 @@ html, body {
     border-color: var(--text-tertiary);
 }
 .message-copy-btn.copied { color: #4ade80; border-color: #4ade80; }
+
+
+/* ====== Theme Toggle ====== */
+.theme-toggle-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); background: transparent;
+    color: var(--text-secondary); font-size: 13px; cursor: pointer;
+    transition: all var(--transition);
+}
+.theme-toggle-btn:hover {
+    background: var(--surface-secondary); color: var(--text-primary);
+}
+.theme-toggle-btn .icon-sun, .theme-toggle-btn .icon-moon {
+    width: 16px; height: 16px;
+}
+[data-theme="dark"] .icon-sun { display: none; }
+[data-theme="dark"] .icon-moon { display: block; }
+[data-theme="light"] .icon-sun { display: block; }
+[data-theme="light"] .icon-moon { display: none; }
