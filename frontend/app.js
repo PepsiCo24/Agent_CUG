@@ -291,31 +291,60 @@
 
     // ====== ???? ======
     // ====== 删除对话 ======
-    async function deleteConversation(convId) {
+    // ====== 自定义弹窗 ======
+    function showModal(title, message, showInput, callback) {
+        var modal = document.createElement("div");
+        modal.className = "custom-modal-overlay";
+        var inputHtml = showInput ? '<input type="text" class="custom-modal-input" id="modalInput" placeholder="' + escHtml(message) + '">' : '<p class="custom-modal-message">' + escHtml(message) + '</p>';
+        var btnHtml = showInput
+            ? '<button class="custom-modal-btn primary" id="modalOk">确定</button><button class="custom-modal-btn" id="modalCancel">取消</button>'
+            : '<button class="custom-modal-btn danger" id="modalOk">删除</button><button class="custom-modal-btn" id="modalCancel">取消</button>';
+        modal.innerHTML = '<div class="custom-modal"><div class="custom-modal-header">' + escHtml(title) + '</div><div class="custom-modal-body">' + inputHtml + '</div><div class="custom-modal-footer">' + btnHtml + '</div></div>';
+        document.body.appendChild(modal);
+        var input = document.getElementById("modalInput");
+        if (input) { input.focus(); input.select(); }
+        document.getElementById("modalOk").addEventListener("click", function () {
+            modal.remove();
+            if (callback) callback(showInput ? (input ? input.value.trim() : "") : true);
+        });
+        document.getElementById("modalCancel").addEventListener("click", function () {
+            modal.remove();
+            if (callback) callback(null);
+        });
+        modal.addEventListener("click", function (e) { if (e.target === modal) { modal.remove(); if (callback) callback(null); } });
+        // Keyboard support
+        document.addEventListener("keydown", function handler(e) {
+            if (e.key === "Escape") { modal.remove(); document.removeEventListener("keydown", handler); if (callback) callback(null); }
+            if (e.key === "Enter" && input) { modal.remove(); document.removeEventListener("keydown", handler); if (callback) callback(input.value.trim()); }
+        });
+    }
+
+    function deleteConversation(convId) {
         if (!convId) return;
-        if (!confirm("确定要删除这个对话吗？")) return;
-        try {
-            var resp = await fetch("/api/history/" + convId, { method: "DELETE" });
-            if (resp.ok) {
-                if (conversationId === convId) startNewChat();
-                loadHistory();
-            }
-        } catch (e) { console.warn("删除失败:", e); }
+        showModal("删除对话", "确定要删除这个对话吗？此操作不可撤销。", false, function (confirmed) {
+            if (!confirmed) return;
+            fetch("/api/history/" + convId, { method: "DELETE" }).then(function (resp) {
+                if (resp.ok) {
+                    if (conversationId === convId) startNewChat();
+                    loadHistory();
+                }
+            }).catch(function (e) { console.warn("删除失败:", e); });
+        });
     }
 
     // ====== 重命名对话 ======
-    async function renameConversation(convId) {
+    function renameConversation(convId) {
         if (!convId) return;
-        var newTitle = prompt("请输入新标题:");
-        if (!newTitle || !newTitle.trim()) return;
-        try {
-            var resp = await fetch("/api/history/" + convId + "/title", {
+        showModal("重命名对话", "请输入新标题", true, function (newTitle) {
+            if (!newTitle) return;
+            fetch("/api/history/" + convId + "/title", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title: newTitle.trim() }),
-            });
-            if (resp.ok) loadHistory();
-        } catch (e) { console.warn("重命名失败:", e); }
+                body: JSON.stringify({ title: newTitle }),
+            }).then(function (resp) {
+                if (resp.ok) loadHistory();
+            }).catch(function (e) { console.warn("重命名失败:", e); });
+        });
     }
 
 

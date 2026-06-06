@@ -472,3 +472,50 @@ html, body {
 .context-menu-item.danger:hover {
     background: rgba(239, 68, 68, 0.1);
 }
+
+
+/* ====== Custom Modal ====== */
+.custom-modal-overlay {
+    position: fixed; z-index: 2000; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+    animation: fadeIn 0.15s ease;
+}
+.custom-modal {
+    background: var(--surface-primary); border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg); width: 380px; max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4); overflow: hidden;
+    animation: slideUp 0.2s ease;
+}
+.custom-modal-header {
+    padding: 16px 20px; font-size: 15px; font-weight: 600;
+    color: var(--text-primary); border-bottom: 1px solid var(--border-light);
+}
+.custom-modal-body { padding: 20px; }
+.custom-modal-message {
+    color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin: 0;
+}
+.custom-modal-input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); background: var(--surface-secondary);
+    color: var(--text-primary); font-size: 14px; outline: none;
+    box-sizing: border-box;
+}
+.custom-modal-input:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 2px rgba(171,104,255,0.2);
+}
+.custom-modal-footer {
+    display: flex; justify-content: flex-end; gap: 8px;
+    padding: 12px 20px; border-top: 1px solid var(--border-light);
+}
+.custom-modal-btn {
+    padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-light);
+    background: var(--surface-secondary); color: var(--text-primary);
+    font-size: 13px; cursor: pointer;
+}
+.custom-modal-btn:hover { background: var(--surface-tertiary); }
+.custom-modal-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+.custom-modal-btn.primary:hover { opacity: 0.9; }
+.custom-modal-btn.danger { background: #ef4444; color: white; border-color: #ef4444; }
+.custom-modal-btn.danger:hover { background: #dc2626; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
