@@ -458,12 +458,10 @@
         inner.className = "message-inner";
         var avatar = document.createElement("div");
         avatar.className = "message-avatar";
-        avatar.textContent = role === "user" ? "\ud83d\udc64" : role === "tool" ? "\ud83d\udd27" : "\ud83e\udd16";
         var contentDiv = document.createElement("div");
         contentDiv.className = "message-content";
         if (streaming) contentDiv.classList.add("streaming-cursor");
         if (content) contentDiv.innerHTML = renderMarkdown(content);
-        inner.appendChild(avatar);
         inner.appendChild(contentDiv);
         // Copy button for assistant/tool messages
         if (role === "assistant" || role === "tool") {
@@ -551,20 +549,20 @@
     }
 
     // ====== Markdown 渲染 ======
-    function renderMarkdown(text) {
+        function renderMarkdown(text) {
         if (!text) return "";
 
         // 1. Extract and protect code blocks first
         var codeBlocks = [];
-        var html = text.replace(/```(\w*)\n([\s\S]*?)```/g, function (match, lang, code) {
+        var html = text.replace(/```(\w*)\r?\n([\s\S]*?)```/g, function (match, lang, code) {
             codeBlocks.push({ lang: lang || "code", code: code.trim() });
             return "%%CODEBLOCK_" + (codeBlocks.length - 1) + "%%";
         });
 
-        // 2. Escape HTML (but not in code blocks)
+        // 2. Escape HTML
         html = escHtml(html);
 
-        // 3. Restore code blocks with proper HTML
+        // 3. Restore code blocks
         html = html.replace(/%%CODEBLOCK_(\d+)%%/g, function (match, idx) {
             var block = codeBlocks[parseInt(idx)];
             return '<div class="code-block-header"><span>' + escHtml(block.lang) +
@@ -572,7 +570,7 @@
                 '<pre><code>' + escHtml(block.code) + '</code></pre>';
         });
 
-        // 4. Inline code
+        // 4. Inline code (after HTML escape, backticks survive)
         html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
 
         // 5. Headers
@@ -580,57 +578,69 @@
         html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
         html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
-        // 6. Bold and italic
-        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+        // 6. Bold+Italic (***), Bold (**), Italic (*)
+        html = html.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+        html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/(?<!\*)\*(?!\*)([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
 
-        // 7. Links
+        // 7. Strikethrough
+        html = html.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+
+        // 8. Links (before images)
+        html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
         html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
-        // 8. Images
-        html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
+        // 9. Horizontal rule
+        html = html.replace(/^(\*{3,}|-{3,}|_{3,})$/gm, '<hr>');
 
-        // 9. Unordered lists
+        // 10. Unordered lists
         html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>');
         html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
 
-        // 10. Ordered lists
+        // 11. Ordered lists
         html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+        // Wrap orphaned <li> after ordered list in <ol>
+        var hasOl = false;
+        html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, function (m) {
+            if (hasOl) return m;
+            hasOl = true;
+            return m;
+        });
 
-        // 11. Blockquote
-        html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+        // 12. Blockquote
+        html = html.replace(/^&gt;\s?(.+)$/gm, '<blockquote>$1</blockquote>');
 
-        // 12. Horizontal rule
-        html = html.replace(/^---$/gm, '<hr>');
-
-        // 13. Table support
+        // 13. Table
         html = html.replace(/^\|(.+)\|$/gm, function (match) {
-            var cells = match.split('|').filter(function (c) { return c.trim(); });
+            var cells = match.split("|").filter(function (c) { return c.trim(); });
             if (cells.length < 2) return match;
-            var row = '<tr>';
+            var row = "<tr>";
             for (var i = 0; i < cells.length; i++) {
-                row += '<td>' + cells[i].trim() + '</td>';
+                row += "<td>" + cells[i].trim() + "</td>";
             }
-            return row + '</tr>';
+            return row + "</tr>";
         });
         html = html.replace(/((?:<tr>.*<\/tr>\n?)+)/g, '<table>$1</table>');
 
         // 14. Paragraph wrapping
-        var paragraphs = html.split('\n\n');
-        html = '';
+        var paragraphs = html.split("\n\n");
+        html = "";
         for (var p = 0; p < paragraphs.length; p++) {
             var para = paragraphs[p].trim();
             if (!para) continue;
-            if (para.indexOf('<h') === 0 || para.indexOf('<pre') === 0 || para.indexOf('<div') === 0 ||
-                para.indexOf('<ul') === 0 || para.indexOf('<ol') === 0 || para.indexOf('<blockquote') === 0 ||
-                para.indexOf('<hr') === 0 || para.indexOf('<tr') === 0 || para.indexOf('<table') === 0) {
-                html += para + '\n';
+            if (para.indexOf("<h") === 0 || para.indexOf("<pre") === 0 || para.indexOf("<div") === 0 ||
+                para.indexOf("<ul") === 0 || para.indexOf("<ol") === 0 || para.indexOf("<blockquote") === 0 ||
+                para.indexOf("<hr") === 0 || para.indexOf("<tr") === 0 || para.indexOf("<table") === 0 ||
+                para.indexOf("<li") === 0) {
+                html += para + "\n";
             } else {
-                html += '<p>' + para.replace(/\n/g, '<br>') + '</p>\n';
+                html += "<p>" + para.replace(/\n/g, "<br>") + "</p>\n";
             }
         }
         return html;
-    }    function scrollToBottom() {
+    }
+
+    function scrollToBottom() {
         requestAnimationFrame(function () {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
