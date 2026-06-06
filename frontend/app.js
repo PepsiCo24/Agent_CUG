@@ -263,6 +263,35 @@
     }
 
     // ====== ???? ======
+    // ====== 删除对话 ======
+    async function deleteConversation(convId) {
+        if (!convId) return;
+        if (!confirm("确定要删除这个对话吗？")) return;
+        try {
+            var resp = await fetch("/api/history/" + convId, { method: "DELETE" });
+            if (resp.ok) {
+                if (conversationId === convId) startNewChat();
+                loadHistory();
+            }
+        } catch (e) { console.warn("删除失败:", e); }
+    }
+
+    // ====== 重命名对话 ======
+    async function renameConversation(convId) {
+        if (!convId) return;
+        var newTitle = prompt("请输入新标题:");
+        if (!newTitle || !newTitle.trim()) return;
+        try {
+            var resp = await fetch("/api/history/" + convId + "/title", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: newTitle.trim() }),
+            });
+            if (resp.ok) loadHistory();
+        } catch (e) { console.warn("重命名失败:", e); }
+    }
+
+
     async function sendMessage() {
         var text = messageInput.value.trim();
         if (!text || isStreaming) return;
@@ -446,73 +475,84 @@
     // ====== Markdown 渲染 ======
     function renderMarkdown(text) {
         if (!text) return "";
-        var html = escHtml(text);
 
-        // 代码块 ```lang\n...\n```
-        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function (match, lang, code) {
-            var langLabel = lang || "code";
-            return "<div class=\"code-block-header\"><span>" + escHtml(langLabel) +
-                "</span><button class=\"copy-btn\" data-code=\"" + escAttr(code.trim()) + "\">\u590d\u5236</button></div>" +
-                "<pre><code>" + escHtml(code) + "</code></pre>";
+        // 1. Extract and protect code blocks first
+        var codeBlocks = [];
+        var html = text.replace(/```(\w*)\n([\s\S]*?)```/g, function (match, lang, code) {
+            codeBlocks.push({ lang: lang || "code", code: code.trim() });
+            return "%%CODEBLOCK_" + (codeBlocks.length - 1) + "%%";
         });
 
-        // 行内代码
-        html = html.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+        // 2. Escape HTML (but not in code blocks)
+        html = escHtml(html);
 
-        // 标题
-        html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-        html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-        html = html.replace(/^# (.+)$/gm, "<h1>$1</h1>");
+        // 3. Restore code blocks with proper HTML
+        html = html.replace(/%%CODEBLOCK_(\d+)%%/g, function (match, idx) {
+            var block = codeBlocks[parseInt(idx)];
+            return '<div class="code-block-header"><span>' + escHtml(block.lang) +
+                '</span><button class="copy-btn" data-code="' + escAttr(block.code) + '">复制</button></div>' +
+                '<pre><code>' + escHtml(block.code) + '</code></pre>';
+        });
 
-        // 粗斜体
-        html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-        html = html.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
+        // 4. Inline code
+        html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
 
-        // 链接
-        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<a href=\"$2\" target=\"_blank\" rel=\"noopener\">$1</a>");
+        // 5. Headers
+        html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
-        // 无序列表
-        html = html.replace(/^[\*\-] (.+)$/gm, "<li>$1</li>");
-        html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, "<ul>$1</ul>");
+        // 6. Bold and italic
+        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
 
-        // 有序列表
-        html = html.replace(/^\d+\. (.+)$/gm, "<li>$1</li>");
+        // 7. Links
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
-        // 引用
-        html = html.replace(/^&gt; (.+)$/gm, "<blockquote>$1</blockquote>");
+        // 8. Images
+        html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
 
-        // 分隔线
-        html = html.replace(/^---$/gm, "<hr>");
+        // 9. Unordered lists
+        html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>');
+        html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
 
-        // 表格
+        // 10. Ordered lists
+        html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+        // 11. Blockquote
+        html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+        // 12. Horizontal rule
+        html = html.replace(/^---$/gm, '<hr>');
+
+        // 13. Table support
         html = html.replace(/^\|(.+)\|$/gm, function (match) {
-            var cells = match.split("|").filter(function (c) { return c.trim(); });
+            var cells = match.split('|').filter(function (c) { return c.trim(); });
             if (cells.length < 2) return match;
-            var row = "<tr>";
+            var row = '<tr>';
             for (var i = 0; i < cells.length; i++) {
-                row += "<td>" + cells[i].trim() + "</td>";
+                row += '<td>' + cells[i].trim() + '</td>';
             }
-            return row + "</tr>";
+            return row + '</tr>';
         });
+        html = html.replace(/((?:<tr>.*<\/tr>\n?)+)/g, '<table>$1</table>');
 
-        // 段落
-        var paragraphs = html.split("\n\n");
-        html = "";
+        // 14. Paragraph wrapping
+        var paragraphs = html.split('\n\n');
+        html = '';
         for (var p = 0; p < paragraphs.length; p++) {
             var para = paragraphs[p].trim();
             if (!para) continue;
-            if (para.startsWith("<h") || para.startsWith("<pre") || para.startsWith("<div") ||
-                para.startsWith("<ul") || para.startsWith("<ol") || para.startsWith("<blockquote") ||
-                para.startsWith("<hr") || para.startsWith("<tr") || para.startsWith("<table")) {
-                html += para + "\n";
+            if (para.indexOf('<h') === 0 || para.indexOf('<pre') === 0 || para.indexOf('<div') === 0 ||
+                para.indexOf('<ul') === 0 || para.indexOf('<ol') === 0 || para.indexOf('<blockquote') === 0 ||
+                para.indexOf('<hr') === 0 || para.indexOf('<tr') === 0 || para.indexOf('<table') === 0) {
+                html += para + '\n';
             } else {
-                html += "<p>" + para.replace(/\n/g, "<br>") + "</p>\n";
+                html += '<p>' + para.replace(/\n/g, '<br>') + '</p>\n';
             }
         }
         return html;
-    }
-
-    function scrollToBottom() {
+    }    function scrollToBottom() {
         requestAnimationFrame(function () {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });

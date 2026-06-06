@@ -98,6 +98,38 @@ html, body {
 }
 .history-item:hover { background: var(--surface-secondary); color: var(--text-primary); }
 .history-item.active { background: var(--surface-secondary); color: var(--text-primary); }
+
+/* History item actions */
+.history-item-main {
+    flex: 1; overflow: hidden; min-width: 0;
+}
+.history-item .history-title {
+    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.history-item .history-time {
+    display: block; font-size: 11px; color: var(--text-tertiary); margin-top: 2px;
+}
+.history-actions {
+    display: none; gap: 4px; margin-left: 8px; flex-shrink: 0;
+}
+.history-item:hover .history-actions {
+    display: flex;
+}
+.history-action-btn {
+    padding: 4px; border: none; background: transparent; color: var(--text-tertiary);
+    cursor: pointer; border-radius: var(--radius-sm); display: flex; align-items: center;
+    transition: all var(--transition);
+}
+.history-action-btn:hover {
+    background: var(--surface-tertiary); color: var(--text-primary);
+}
+.history-action-btn[data-action="delete"]:hover {
+    color: #ef4444;
+}
+.history-empty {
+    padding: 20px 12px; text-align: center; color: var(--text-tertiary); font-size: 13px;
+}
+
 .history-empty { padding: 16px 12px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
 .history-title { overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .history-time { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; margin-left: 8px; }
