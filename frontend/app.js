@@ -199,6 +199,33 @@
         });
     }
 
+        // ==== 右键菜单 ====
+        document.addEventListener("contextmenu", function (e) {
+            var item = e.target.closest(".history-item");
+            if (!item) return;
+            e.preventDefault();
+            var cid = item.dataset.id;
+            if (!cid) return;
+            var existing = document.querySelector(".context-menu");
+            if (existing) existing.remove();
+            var menu = document.createElement("div");
+            menu.className = "context-menu";
+            menu.style.left = e.pageX + "px";
+            menu.style.top = e.pageY + "px";
+            menu.innerHTML = '<div class="context-menu-item" data-action="rename">\u270f\ufe0f 重命名</div>' +'<div class="context-menu-item danger" data-action="delete">\ud83d\uddd1\ufe0f 删除</div>';
+            menu.querySelector("[data-action=rename]").addEventListener("click", function () {
+                menu.remove(); renameConversation(cid);
+            });
+            menu.querySelector("[data-action=delete]").addEventListener("click", function () {
+                menu.remove(); deleteConversation(cid);
+            });
+            document.body.appendChild(menu);
+        });
+        document.addEventListener("click", function () {
+            var menu = document.querySelector(".context-menu");
+            if (menu) menu.remove();
+        });
+
     function switchPanel(panel) {
         chatPanel.classList.remove("active");
         ragPanel.classList.remove("active");
