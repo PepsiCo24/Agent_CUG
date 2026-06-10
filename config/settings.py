@@ -23,7 +23,7 @@ class LLMSettings(BaseSettings):
     API_BASE: str = "https://api.openai.com/v1"
     MODEL: str = "gpt-4o"
     MAX_TOKENS: int = 4096
-    TEMPERATURE: float = 0.7
+    TEMPERATURE: float = 0.3
 
 
 class EmbeddingSettings(BaseSettings):

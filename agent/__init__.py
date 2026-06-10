@@ -381,6 +381,10 @@ class AgentWorkflow:
             full_answer += token
             yield token
 
+        # ??????????? tokenizer ???? "4 053" ?????
+        import re as _re
+        full_answer = _re.sub(r"(?<=\d) (?=\d)", "", full_answer)
+
         # 保存记忆
         await self._memory.add(MemoryItem(
             id="", content=state["user_input"], role="user",

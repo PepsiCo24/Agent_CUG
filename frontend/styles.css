@@ -1,32 +1,5 @@
-/
 
-/* ====== Light Theme ====== */
-[data-theme="light"] {
-    --text-primary: #1a1a1a;
-    --text-secondary: #4a4a4a;
-    --text-tertiary: #8e8e8e;
-    --surface-primary: #ffffff;
-    --surface-secondary: #f7f7f8;
-    --surface-tertiary: #ececf1;
-    --border-light: rgba(0,0,0,0.08);
-    --border-medium: rgba(0,0,0,0.12);
-    --border-strong: rgba(0,0,0,0.18);
-}
-
-/* ChatGPT-style: user right, assistant left */
-.message-row.user .message-inner {
-    flex-direction: row-reverse;
-}
-.message-row.user .message-content {
-    text-align: right;
-}
-.message-row.assistant .message-content {
-    text-align: left;
-}
-.message-row.user .message-actions {
-    justify-content: flex-end;
-}
-* ============================================================
+/* ============================================================
    Agent_CUG — 精仿 ChatGPT Dark Theme
    基于 ChatGPT 真实 CSS 变量和 Tailwind prose 排版
    ============================================================ */
@@ -56,6 +29,19 @@
     --radius-lg: 16px;
     --radius-xl: 24px;
     --transition: 0.15s ease;
+}
+
+/* ====== Light Theme ====== */
+[data-theme="light"] {
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-tertiary: #8e8e8e;
+    --surface-primary: #ffffff;
+    --surface-secondary: #f7f7f8;
+    --surface-tertiary: #ececf1;
+    --border-light: rgba(0,0,0,0.08);
+    --border-medium: rgba(0,0,0,0.12);
+    --border-strong: rgba(0,0,0,0.18);
 }
 
 @media (min-width: 1024px) {
@@ -257,6 +243,20 @@ html, body {
     /* break-words whitespace-normal */
     word-break: break-word; overflow-wrap: anywhere;
     white-space: normal;
+}
+
+/* ChatGPT-style: user right, assistant left */
+.message-row.user .message-inner {
+    flex-direction: row-reverse;
+}
+.message-row.user .message-content {
+    text-align: right;
+}
+.message-row.assistant .message-content {
+    text-align: left;
+}
+.message-row.user .message-actions {
+    justify-content: flex-end;
 }
 
 /* ====== Prose / Markdown 排版 (仿 Tailwind prose dark:prose-invert) ====== */
@@ -566,6 +566,86 @@ html, body {
 }
 .message-copy-btn.copied { color: #4ade80; border-color: #4ade80; }
 
+
+
+/* Edit button: sits below text at bottom-right, does not overlap */
+.message-row.user .message-content {
+    position: relative;
+    padding-bottom: 28px;
+}
+.message-row.user .message-actions {
+    position: absolute;
+    bottom: 2px;
+    right: 0;
+    margin: 0;
+    padding: 2px 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    justify-content: flex-end;
+}
+.message-row.user:hover .message-actions {
+    opacity: 1;
+}
+/* Inline edit textarea */
+.message-edit-textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+}
+.message-edit-textarea:focus {
+    border-color: var(--brand-purple);
+    box-shadow: 0 0 0 2px rgba(171,104,255,0.15);
+}
+/* Confirm/cancel buttons during inline edit */
+.message-edit-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    justify-content: flex-end;
+}
+.message-edit-confirm,
+.message-edit-cancel {
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.message-edit-confirm {
+    background: var(--brand-purple);
+    color: white;
+    border-color: var(--brand-purple);
+}
+.message-edit-confirm:hover { opacity: 0.85; }
+.message-edit-cancel:hover {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+}
+/* Edit button icon style */
+.message-edit-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); background: transparent;
+    color: var(--text-tertiary); font-size: 12px; cursor: pointer;
+    transition: all var(--transition);
+}
+.message-edit-btn:hover {
+    background: var(--surface-secondary); color: var(--text-primary);
+    border-color: var(--text-tertiary);
+}
 
 /* ====== Theme Toggle ====== */
 .theme-toggle-btn {

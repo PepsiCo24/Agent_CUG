@@ -443,6 +443,8 @@
 
             if (contentEl) {
                 contentEl.classList.remove("streaming-cursor");
+                // ??????????? tokenizer ???
+                fullText = fullText.replace(/(\d) (\d)/g, "$1$2");
                 contentEl.innerHTML = renderFinal(fullText, toolCalls);
             }
             messages.push({ role: "assistant", content: fullText });
@@ -482,6 +484,20 @@
         if (streaming) contentDiv.classList.add("streaming-cursor");
         if (content) contentDiv.innerHTML = renderMarkdown(content);
         inner.appendChild(contentDiv);
+        // Edit button for user messages
+        if (role === "user") {
+            var userActionsDiv = document.createElement("div");
+            userActionsDiv.className = "message-actions";
+            var editBtn = document.createElement("button");
+            editBtn.className = "message-edit-btn";
+            editBtn.title = "编辑消息";
+            editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+            editBtn.addEventListener("click", function () {
+                editUserMessage(row);
+            });
+            userActionsDiv.appendChild(editBtn);
+            contentDiv.appendChild(userActionsDiv);
+        }
         // Copy button for assistant/tool messages
         if (role === "assistant" || role === "tool") {
             var actionsDiv = document.createElement("div");
@@ -568,7 +584,8 @@
     }
 
     // ====== Markdown 渲染 ======
-        function renderMarkdown(text) {
+        // ====== Markdown ?? ======
+    function renderMarkdown(text) {
         if (!text) return "";
 
         // 1. Extract and protect code blocks first
@@ -584,12 +601,14 @@
         // 3. Restore code blocks
         html = html.replace(/%%CODEBLOCK_(\d+)%%/g, function (match, idx) {
             var block = codeBlocks[parseInt(idx)];
+            var escapedCode = escHtml(block.code);
+            var attrCode = escAttr(block.code).replace(/\n/g, '&#10;');
             return '<div class="code-block-header"><span>' + escHtml(block.lang) +
-                '</span><button class="copy-btn" data-code="' + escAttr(block.code) + '">复制</button></div>' +
-                '<pre><code>' + escHtml(block.code) + '</code></pre>';
+                '</span><button class="copy-btn" data-code="' + attrCode + '">\u590d\u5236</button></div>' +
+                '<pre><code>' + escapedCode + '</code></pre>';
         });
 
-        // 4. Inline code (after HTML escape, backticks survive)
+        // 4. Inline code
         html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
 
         // 5. Headers
@@ -597,51 +616,87 @@
         html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
         html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
-        // 6. Bold+Italic (***), Bold (**), Italic (*)
-        html = html.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>');
-        html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/(?<!\*)\*(?!\*)([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
+        // 6. Bold+Italic (***), Bold (**), Italic (*) - allow newlines inside
+        html = html.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/(?<!\*)\*(?!\*)([^*]+?)\*(?!\*)/g, '<em>$1</em>');
 
         // 7. Strikethrough
-        html = html.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+        html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
 
-        // 8. Links (before images)
+        // 8. Links and images
         html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
         html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
         // 9. Horizontal rule
         html = html.replace(/^(\*{3,}|-{3,}|_{3,})$/gm, '<hr>');
 
-        // 10. Unordered lists
+        // 10. Ordered lists - use placeholder to isolate from unordered list regex
+        html = html.replace(/((?:^\d+\. .+$\n?)+)/gm, function(match) {
+            var items = match.replace(/^\d+\. (.+)$/gm, '<_LI_>$1</_LI_>');
+            return '<_OL_>' + items.trim() + '</_OL_>';
+        });
+
+        // 11. Unordered lists
         html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>');
         html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
 
-        // 11. Ordered lists
-        html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-        // Wrap orphaned <li> after ordered list in <ol>
-        var hasOl = false;
-        html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, function (m) {
-            if (hasOl) return m;
-            hasOl = true;
-            return m;
-        });
+        // Restore ordered list tags
+        html = html.replace(/<_OL_>/g, '<ol>');
+        html = html.replace(/<\/_OL_>/g, '</ol>');
+        html = html.replace(/<_LI_>/g, '<li>');
+        html = html.replace(/<\/_LI_>/g, '</li>');
 
         // 12. Blockquote
         html = html.replace(/^&gt;\s?(.+)$/gm, '<blockquote>$1</blockquote>');
 
-        // 13. Table
-        html = html.replace(/^\|(.+)\|$/gm, function (match) {
-            var cells = match.split("|").filter(function (c) { return c.trim(); });
-            if (cells.length < 2) return match;
-            var row = "<tr>";
-            for (var i = 0; i < cells.length; i++) {
-                row += "<td>" + cells[i].trim() + "</td>";
-            }
-            return row + "</tr>";
-        });
-        html = html.replace(/((?:<tr>.*<\/tr>\n?)+)/g, '<table>$1</table>');
+        // 13. Table (skip separator row, use <th> for header)
+        var lines = html.split("\n");
+        var newLines = [];
+        var tableRows = [];
+        var isHeaderRow = true;
 
-        // 14. Paragraph wrapping
+        for (var li = 0; li < lines.length; li++) {
+            var line = lines[li];
+            if (/^\|.+\|$/.test(line)) {
+                var cells = line.split("|").filter(function(c) { return c.trim() !== ""; });
+                if (cells.length < 2) { newLines.push(line); continue; }
+
+                var isSep = true;
+                for (var ci = 0; ci < cells.length; ci++) {
+                    if (!/^[-: ]+$/.test(cells[ci].trim())) { isSep = false; break; }
+                }
+                if (isSep) { isHeaderRow = false; continue; }
+
+                var rowHtml = "<tr>";
+                var tag = isHeaderRow ? "th" : "td";
+                for (var ci2 = 0; ci2 < cells.length; ci2++) {
+                    rowHtml += "<" + tag + ">" + cells[ci2].trim() + "</" + tag + ">";
+                }
+                rowHtml += "</tr>";
+                tableRows.push(rowHtml);
+                isHeaderRow = false;
+            } else {
+                if (tableRows.length > 0) {
+                    newLines.push("<table>" + tableRows.join("\n") + "</table>");
+                    tableRows = [];
+                    isHeaderRow = true;
+                }
+                newLines.push(line);
+            }
+        }
+        if (tableRows.length > 0) {
+            newLines.push("<table>" + tableRows.join("\n") + "</table>");
+        }
+        html = newLines.join("\n");
+
+        // 14. Paragraph wrapping - protect HTML blocks first
+        var protectedBlocks = [];
+        html = html.replace(/(<(?:pre|table|ul|ol|blockquote)[\s\S]*?<\/(?:pre|table|ul|ol|blockquote)>)/g, function(m) {
+            protectedBlocks.push(m);
+            return "%%PROTECT_" + (protectedBlocks.length - 1) + "%%";
+        });
+
         var paragraphs = html.split("\n\n");
         html = "";
         for (var p = 0; p < paragraphs.length; p++) {
@@ -649,17 +704,267 @@
             if (!para) continue;
             if (para.indexOf("<h") === 0 || para.indexOf("<pre") === 0 || para.indexOf("<div") === 0 ||
                 para.indexOf("<ul") === 0 || para.indexOf("<ol") === 0 || para.indexOf("<blockquote") === 0 ||
-                para.indexOf("<hr") === 0 || para.indexOf("<tr") === 0 || para.indexOf("<table") === 0 ||
-                para.indexOf("<li") === 0) {
+                para.indexOf("<hr") === 0 || para.indexOf("<table") === 0 ||
+                para.indexOf("<li") === 0 ||
+                para.indexOf("%%PROTECT_") === 0) {
                 html += para + "\n";
             } else {
                 html += "<p>" + para.replace(/\n/g, "<br>") + "</p>\n";
             }
         }
+
+        // Restore protected blocks
+        html = html.replace(/%%PROTECT_(\d+)%%/g, function(m, idx) {
+            return protectedBlocks[parseInt(idx)] || "";
+        });
+
+        // 15. Clean up unmatched double-asterisk markers
+        html = html.replace(/\*\*/g, '');
+        html = html.replace(/~~/g, '');
+
         return html;
     }
 
-    function scrollToBottom() {
+    
+    // ====== ?????? (????) ======
+    function editUserMessage(row) {
+        var contentEl = row.querySelector(".message-content");
+        var actionsEl = row.querySelector(".message-actions");
+        var originalText = contentEl ? (contentEl.textContent || "").trim() : "";
+        if (!originalText || !contentEl) return;
+
+        // Already editing?
+        if (contentEl.querySelector(".message-edit-textarea")) return;
+
+        // Get text without the edit button text
+        var clone = contentEl.cloneNode(true);
+        var a = clone.querySelector(".message-actions");
+        if (a) a.remove();
+        var textOnly = (clone.textContent || "").trim();
+        var originalHTML = contentEl.innerHTML;
+
+        // Replace content with textarea
+        contentEl.innerHTML = "";
+        var textarea = document.createElement("textarea");
+        textarea.className = "message-edit-textarea";
+        textarea.value = textOnly;
+        contentEl.appendChild(textarea);
+
+        // Add confirm/cancel buttons
+        var btnRow = document.createElement("div");
+        btnRow.className = "message-edit-actions";
+
+        var cancelBtn = document.createElement("button");
+        cancelBtn.className = "message-edit-cancel";
+        cancelBtn.textContent = "\u53d6\u6d88";
+        cancelBtn.addEventListener("click", function () {
+            contentEl.innerHTML = originalHTML;
+            rebindEditButton(row);
+        });
+
+        var confirmBtn = document.createElement("button");
+        confirmBtn.className = "message-edit-confirm";
+        var svgSpan = document.createElement("span");
+        svgSpan.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><line x1="22" y1="2" x2="11" y2="13"></line><polyline points="11 13 7 9 4 9 11 22 22 2"></polyline></svg>';
+        confirmBtn.appendChild(svgSpan);
+        confirmBtn.appendChild(document.createTextNode("\u53d1\u9001"));
+        confirmBtn.addEventListener("click", function () {
+            submitEdit(row, contentEl, textarea, textOnly);
+        });
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(confirmBtn);
+        contentEl.appendChild(btnRow);
+
+        textarea.focus();
+        textarea.select();
+
+        textarea.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submitEdit(row, contentEl, textarea, textOnly);
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                contentEl.innerHTML = originalHTML;
+                rebindEditButton(row);
+            }
+        });
+
+        textarea.addEventListener("input", function () {
+            textarea.style.height = "auto";
+            textarea.style.height = textarea.scrollHeight + "px";
+        });
+        textarea.style.height = textarea.scrollHeight + "px";
+    }
+
+    function rebindEditButton(row) {
+        var editBtn = row.querySelector(".message-edit-btn");
+        if (editBtn) {
+            var newBtn = editBtn.cloneNode(true);
+            editBtn.parentNode.replaceChild(newBtn, editBtn);
+            newBtn.addEventListener("click", function () {
+                editUserMessage(row);
+            });
+        }
+    }
+
+    function submitEdit(row, contentEl, textarea, originalText) {
+        var newText = textarea.value.trim();
+        if (!newText) return;
+
+        var rows = chatMessages.children;
+        var rowIdx = -1;
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i] === row) { rowIdx = i; break; }
+        }
+        if (rowIdx === -1) return;
+
+        var userMsgCount = 0;
+        for (var i = 0; i <= rowIdx; i++) {
+            if (rows[i].classList.contains("user")) userMsgCount++;
+        }
+
+        var found = 0;
+        for (var i = 0; i < messages.length; i++) {
+            if (messages[i].role === "user") {
+                found++;
+                if (found === userMsgCount) {
+                    messages[i].content = newText;
+                    if (i + 1 < messages.length && messages[i + 1].role === "assistant") {
+                        messages.splice(i + 1, 1);
+                    }
+                    break;
+                }
+            }
+        }
+
+        var next = row.nextElementSibling;
+        while (next && !next.classList.contains("user")) {
+            var toRemove = next;
+            next = next.nextElementSibling;
+            toRemove.remove();
+        }
+
+        contentEl.innerHTML = "<p>" + escHtml(newText) + "</p>";
+        var actionsDiv = document.createElement("div");
+        actionsDiv.className = "message-actions";
+        var editBtn = document.createElement("button");
+        editBtn.className = "message-edit-btn";
+        editBtn.title = "\u7f16\u8f91\u6d88\u606f";
+        editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+        editBtn.addEventListener("click", function () {
+            editUserMessage(row);
+        });
+        actionsDiv.appendChild(editBtn);
+        contentEl.appendChild(actionsDiv);
+
+        sendEditedMessage(newText);
+    }
+
+    function sendEditedMessage(text) {
+        if (!text || isStreaming) return;
+        isStreaming = true;
+        sendBtn.disabled = true;
+        if (welcomeScreen) welcomeScreen.style.display = "none";
+
+        var alreadyInMessages = false;
+        for (var i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].role === "user" && messages[i].content === text) {
+                alreadyInMessages = true;
+                break;
+            }
+        }
+        if (!alreadyInMessages) {
+            messages.push({ role: "user", content: text });
+        }
+
+        var assistantRow = addMessage("assistant", "", true);
+        var contentEl2 = assistantRow.querySelector(".message-content");
+        var fullText = "";
+        var toolCalls = [];
+
+        fetch("/api/chat/stream", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, conversation_id: conversationId }),
+        }).then(function (response) {
+            if (!response.ok) {
+                return response.json().catch(function () { return {}; }).then(function (errData) {
+                    throw new Error(errData.detail || "????: " + response.status);
+                });
+            }
+            return response.body.getReader();
+        }).then(function (reader) {
+            var decoder = new TextDecoder();
+            var buffer = "";
+
+            function pump() {
+                return reader.read().then(function (chunk) {
+                    if (chunk.done) {
+                        if (contentEl2) {
+                            contentEl2.classList.remove("streaming-cursor");
+                            fullText = fullText.replace(/(\d) (\d)/g, "$1$2");
+                            contentEl2.innerHTML = renderFinal(fullText, toolCalls);
+                        }
+                        messages.push({ role: "assistant", content: fullText });
+                        loadHistory();
+                        isStreaming = false;
+                        sendBtn.disabled = false;
+                        messageInput.focus();
+                        return;
+                    }
+                    buffer += decoder.decode(chunk.value, { stream: true });
+                    var lines = buffer.split("\n");
+                    buffer = lines.pop() || "";
+
+                    var currentEvent = null, currentData = "";
+                    for (var i = 0; i < lines.length; i++) {
+                        var line = lines[i];
+                        if (line.startsWith("event: ")) {
+                            currentEvent = line.slice(7).trim();
+                            currentData = "";
+                        } else if (line.startsWith("data: ")) {
+                            currentData = line.slice(6);
+                        } else if (line === "" && currentEvent) {
+                            processStreamEvent2(currentEvent, currentData);
+                            currentEvent = null;
+                        }
+                    }
+                    if (currentEvent) processStreamEvent2(currentEvent, currentData);
+                    if (contentEl2) renderStreamingContent(contentEl2, fullText, toolCalls);
+                    scrollToBottom();
+                    return pump();
+                });
+            }
+
+            function processStreamEvent2(event, data) {
+                if (event === "token") {
+                    fullText += data;
+                } else if (event === "tool_call") {
+                    try { toolCalls.push(JSON.parse(data)); } catch (e) {}
+                } else if (event === "done") {
+                    try {
+                        var payload = JSON.parse(data);
+                        conversationId = payload.conversation_id;
+                    } catch (e) {}
+                } else if (event === "error") {
+                    if (contentEl2) contentEl2.innerHTML = "<p style=\"color:#ef4444\">\u9519\u8bef: " + escHtml(data) + "</p>";
+                }
+            }
+
+            return pump();
+        }).catch(function (error) {
+            if (contentEl2) {
+                contentEl2.classList.remove("streaming-cursor");
+                contentEl2.innerHTML = "<p style=\"color:#ef4444\">\u7f51\u7edc\u9519\u8bef: " + escHtml(error.message) + "</p>";
+            }
+            isStreaming = false;
+            sendBtn.disabled = false;
+        });
+    }
+
+
+function scrollToBottom() {
         requestAnimationFrame(function () {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
