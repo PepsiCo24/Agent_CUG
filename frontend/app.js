@@ -825,14 +825,19 @@
 
     function cleanText(text) {
         if (!text) return text;
+        // Preserve intentional paragraph breaks (double newlines)
+        text = text.replace(/\r?\n\r?\n/g, "%%PARA%%");
+        // Collapse all remaining single newlines to spaces
+        text = text.replace(/[\r\n]+/g, " ");
+        // Restore paragraph breaks
+        text = text.replace(/%%PARA%%/g, "\n\n");
+        // Remove spaces between consecutive digits (e.g. "2 0 2 6" -> "2026")
         text = text.replace(/(\d) (\d)/g, "$1$2");
-        text = text.replace(/([a-zA-Z])\n([a-zA-Z])/g, "$1$2");
-        text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf])([a-zA-Z0-9])/g, "$1 $2");
-        text = text.replace(/([a-zA-Z0-9])([\u4e00-\u9fff\u3400-\u4dbf])/g, "$1 $2");
-        text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf])\n([\u4e00-\u9fff\u3400-\u4dbf])/g, "$1$2");
-        text = text.replace(/([a-zA-Z])\n([a-zA-Z])/g, "$1$2");
+        // Add space between CJK and alphanumeric
+        text = text.replace(/([\u2e80-\u9fff\u3000-\u303f\uff00-\uffef\u3200-\u33ff\uf900-\ufaff])([a-zA-Z0-9])/g, "$1 $2");
+        text = text.replace(/([a-zA-Z0-9])([\u2e80-\u9fff\u3000-\u303f\uff00-\uffef\u3200-\u33ff\uf900-\ufaff])/g, "$1 $2");
+        // Collapse multiple spaces
         text = text.replace(/  +/g, " ");
-        text = text.split("\n").map(function(l) { return l.trim(); }).join("\n");
         return text;
     }
 
@@ -979,7 +984,7 @@
             return "%%PROTECT_" + (protectedBlocks.length - 1) + "%%";
         });
 
-        var paragraphs = html.split("\n\n");
+        var paragraphs = html.split(/\r?\n\r?\n/);
         html = "";
         for (var p = 0; p < paragraphs.length; p++) {
             var para = paragraphs[p].trim();
@@ -991,7 +996,7 @@
                 para.indexOf("%%PROTECT_") === 0) {
                 html += para + "\n";
             } else {
-                html += "<p>" + para.replace(/\n/g, "<br>") + "</p>\n";
+                html += "<p>" + para.replace(/[\r\n]+/g, " ") + "</p>\n";
             }
         }
 
