@@ -211,6 +211,14 @@
         if (panelWX) panelWX.addEventListener("click", function() {
             showAuthError("微信登录功能开发中，请使用账号密码登录");
         });
+        var panelQRBtn = document.getElementById("panelQRBtn");
+        if (panelQRBtn) panelQRBtn.addEventListener("click", function() {
+            userPanel.style.display = "none";
+            userMenuBtn.classList.remove("open");
+            showAuthError("扫码登录功能开发中，请使用账号密码登录");
+            showAuth(true);
+        });
+
 
         // Auth overlay events
         var closeBtn = document.getElementById("authClose");
@@ -245,37 +253,6 @@
         document.getElementById("regPassword2").addEventListener("keydown", function(e) {
             if (e.key === "Enter") doRegister();
         });
-
-        // QR login
-        var qrBtn = document.getElementById("qrLoginBtn");
-        if (qrBtn) qrBtn.addEventListener("click", async function() {
-            var qrDisplay = document.getElementById("qrDisplay");
-            qrDisplay.style.display = "block";
-            try {
-                var data = await fetch("/api/auth/qr/generate").then(function(r) { return r.json(); });
-                var qrEl = qrDisplay.querySelector(".qr-placeholder");
-                qrEl.innerHTML = '<div style="font-size:12px;text-align:center">QR ID:<br>' + data.qr_id.substring(0,12) + '...<br><br>请在手机端确认</div>';
-                var pollCount = 0;
-                var interval = setInterval(async function() {
-                    pollCount++;
-                    if (pollCount > 24) { clearInterval(interval); qrEl.innerHTML = "二维码已过期"; return; }
-                    try {
-                        var check = await fetch("/api/auth/qr/check?token=" + data.qr_id).then(function(r) { return r.json(); });
-                        if (check.status === "claimed") {
-                            clearInterval(interval);
-                            authToken = check.token;
-                            currentUser = check.user;
-                            localStorage.setItem("agent_cug_token", authToken);
-                            localStorage.setItem("agent_cug_user", JSON.stringify(currentUser));
-                            updateUserUI();
-                            showAuth(false);
-                            loadHistory();
-                        }
-                    } catch(e) {}
-                }, 5000);
-            } catch(e) { showAuthError("二维码生成失败"); }
-        });
-    }
 
     function fetchWithAuth(url, opts) {
         opts = opts || {};
