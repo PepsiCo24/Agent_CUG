@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from api import router
+from api.auth_routes import auth_router
 from config import get_settings
 from core.exceptions import AgentCUGError
 

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 
@@ -29,6 +29,7 @@ from api.schemas import (
 )
 from config import get_settings
 from rag import RAGPipeline
+from auth import get_current_user, UserInfo
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,15 @@ _history_store: dict[str, list[dict]] = _load_history_store()
 # ????
 UPLOAD_DIR = Path("./data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+
+@router.get("/auth/me")
+async def auth_me(user: UserInfo | None = Depends(get_current_user)):
+    """Get current authenticated user"""
+    if user:
+        return {"authenticated": True, "user": user.model_dump()}
+    return {"authenticated": False, "user": None}
 
 
 @router.get("/health", response_model=HealthResponse)

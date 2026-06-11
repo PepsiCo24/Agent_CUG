@@ -5,6 +5,203 @@
 (function () {
     "use strict";
 
+
+    // ====== Auth State ======
+    var authToken = localStorage.getItem("agent_cug_token") || "";
+    var currentUser = null;
+
+    // ====== Auth Functions ======
+    function showAuth(show) {
+        var overlay = document.getElementById("authOverlay");
+        if (overlay) overlay.style.display = show ? "flex" : "none";
+        if (!show) {
+            document.getElementById("loginUsername").value = "";
+            document.getElementById("loginPassword").value = "";
+            document.getElementById("regUsername").value = "";
+            document.getElementById("regPassword").value = "";
+            document.getElementById("regPassword2").value = "";
+            document.getElementById("authError").style.display = "none";
+        }
+    }
+
+    function showAuthError(msg) {
+        var el = document.getElementById("authError");
+        if (el) { el.textContent = msg; el.style.display = "block"; }
+    }
+
+    async function apiCall(url, method, body) {
+        var headers = { "Content-Type": "application/json" };
+        if (authToken) headers["Authorization"] = "Bearer " + authToken;
+        var opts = { method: method, headers: headers };
+        if (body) opts.body = JSON.stringify(body);
+        var resp = await fetch(url, opts);
+        var data = await resp.json().catch(function() { return {}; });
+        if (!resp.ok) throw new Error(data.detail || "请求失败 " + resp.status);
+        return data;
+    }
+
+    async function doLogin() {
+        var username = document.getElementById("loginUsername").value.trim();
+        var password = document.getElementById("loginPassword").value;
+        if (!username || !password) { showAuthError("请填写用户名和密码"); return; }
+        try {
+            var data = await apiCall("/api/auth/login", "POST", { username: username, password: password });
+            authToken = data.token;
+            currentUser = data.user;
+            localStorage.setItem("agent_cug_token", authToken);
+            localStorage.setItem("agent_cug_user", JSON.stringify(currentUser));
+            updateUserUI();
+            showAuth(false);
+            loadHistory();
+        } catch (e) { showAuthError(e.message); }
+    }
+
+    async function doRegister() {
+        var username = document.getElementById("regUsername").value.trim();
+        var email = document.getElementById("regEmail").value.trim();
+        var password = document.getElementById("regPassword").value;
+        var password2 = document.getElementById("regPassword2").value;
+        if (!username || !password) { showAuthError("请填写用户名和密码"); return; }
+        if (username.length < 3) { showAuthError("用户名至少3个字符"); return; }
+        if (password.length < 6) { showAuthError("密码至少6个字符"); return; }
+        if (password !== password2) { showAuthError("两次密码不一致"); return; }
+        try {
+            var data = await apiCall("/api/auth/register", "POST", { username: username, password: password, email: email });
+            authToken = data.token;
+            currentUser = data.user;
+            localStorage.setItem("agent_cug_token", authToken);
+            localStorage.setItem("agent_cug_user", JSON.stringify(currentUser));
+            updateUserUI();
+            showAuth(false);
+            loadHistory();
+        } catch (e) { showAuthError(e.message); }
+    }
+
+    function doLogout() {
+        authToken = "";
+        currentUser = null;
+        localStorage.removeItem("agent_cug_token");
+        localStorage.removeItem("agent_cug_user");
+        conversationId = null;
+        updateUserUI();
+        loadHistory();
+        // Clear chat
+        var el = document.getElementById("chatMessages");
+        if (el) el.innerHTML = "";
+        var ws = document.getElementById("welcomeScreen");
+        if (ws) ws.style.display = "flex";
+    }
+
+    function updateUserUI() {
+        var display = document.getElementById("userNameDisplay");
+        var sidebarName = document.getElementById("sidebarUserName");
+        if (currentUser && currentUser.username) {
+            if (display) display.textContent = currentUser.username;
+            if (sidebarName) sidebarName.textContent = currentUser.username;
+        } else {
+            if (display) display.textContent = "登录";
+            if (sidebarName) sidebarName.textContent = "未登录";
+        }
+    }
+
+    function loadSavedUser() {
+        try {
+            var u = localStorage.getItem("agent_cug_user");
+            if (u) currentUser = JSON.parse(u);
+            authToken = localStorage.getItem("agent_cug_token") || "";
+            if (currentUser && !authToken) { currentUser = null; localStorage.removeItem("agent_cug_user"); }
+        } catch (e) { currentUser = null; }
+        updateUserUI();
+    }
+
+    // ====== Auth Event Handlers ======
+    function setupAuthEvents() {
+        var userBtn = document.getElementById("userBtn");
+        if (userBtn) userBtn.addEventListener("click", function() {
+            if (currentUser) { if (confirm("确定要退出登录吗？")) doLogout(); }
+            else showAuth(true);
+        });
+
+        var closeBtn = document.getElementById("authClose");
+        if (closeBtn) closeBtn.addEventListener("click", function() { showAuth(false); });
+
+        var overlay = document.getElementById("authOverlay");
+        if (overlay) overlay.addEventListener("click", function(e) { if (e.target === overlay) showAuth(false); });
+
+        var loginBtn = document.getElementById("loginBtn");
+        if (loginBtn) loginBtn.addEventListener("click", doLogin);
+
+        var regBtn = document.getElementById("regBtn");
+        if (regBtn) regBtn.addEventListener("click", doRegister);
+
+        // Tab switching
+        var tabs = document.querySelectorAll(".auth-tab");
+        tabs.forEach(function(t) {
+            t.addEventListener("click", function() {
+                tabs.forEach(function(x) { x.classList.remove("active"); });
+                t.classList.add("active");
+                var isLogin = t.dataset.tab === "login";
+                document.getElementById("loginForm").style.display = isLogin ? "block" : "none";
+                document.getElementById("registerForm").style.display = isLogin ? "none" : "block";
+                document.getElementById("authError").style.display = "none";
+            });
+        });
+
+        // Enter key to submit
+        document.getElementById("loginPassword").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") doLogin();
+        });
+        document.getElementById("regPassword2").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") doRegister();
+        });
+
+        // Social login placeholders
+        document.querySelector(".social-btn.qq").addEventListener("click", function() {
+            showAuthError("QQ登录功能开发中，请使用账号密码登录");
+        });
+        document.querySelector(".social-btn.wx").addEventListener("click", function() {
+            showAuthError("微信登录功能开发中，请使用账号密码登录");
+        });
+
+        // QR login
+        var qrBtn = document.getElementById("qrLoginBtn");
+        if (qrBtn) qrBtn.addEventListener("click", async function() {
+            var qrDisplay = document.getElementById("qrDisplay");
+            qrDisplay.style.display = "block";
+            try {
+                var data = await fetch("/api/auth/qr/generate").then(function(r) { return r.json(); });
+                var qrEl = qrDisplay.querySelector(".qr-placeholder");
+                qrEl.innerHTML = '<div style="font-size:12px;text-align:center">QR ID:<br>' + data.qr_id.substring(0,12) + '...<br><br>请在手机端确认</div>';
+                // Poll for QR scan
+                var pollCount = 0;
+                var interval = setInterval(async function() {
+                    pollCount++;
+                    if (pollCount > 24) { clearInterval(interval); qrEl.innerHTML = "二维码已过期"; return; }
+                    try {
+                        var check = await fetch("/api/auth/qr/check?token=" + data.qr_id).then(function(r) { return r.json(); });
+                        if (check.status === "claimed") {
+                            clearInterval(interval);
+                            authToken = check.token;
+                            currentUser = check.user;
+                            localStorage.setItem("agent_cug_token", authToken);
+                            localStorage.setItem("agent_cug_user", JSON.stringify(currentUser));
+                            updateUserUI();
+                            showAuth(false);
+                            loadHistory();
+                        }
+                    } catch(e) {}
+                }, 5000);
+            } catch(e) { showAuthError("二维码生成失败"); }
+        });
+    }
+
+    function fetchWithAuth(url, opts) {
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        if (authToken) opts.headers["Authorization"] = "Bearer " + authToken;
+        return fetch(url, opts);
+    }
+
     // ====== DOM ======
     var sidebar = document.getElementById("sidebar");
     var toggleSidebarBtn = document.getElementById("toggleSidebarBtn");
@@ -63,6 +260,8 @@
     setTheme(getTheme());
 
     function init() {
+        loadSavedUser();
+        setupAuthEvents();
         loadConfig();
         loadHistory();
         setupEventListeners();
@@ -71,7 +270,7 @@
 
     async function loadConfig() {
         try {
-            var resp = await fetch("/api/config");
+            var resp = await fetchWithAuth("/api/config");
             var config = await resp.json();
             if (modelBadge) modelBadge.textContent = config.llm_model || "mimo-v2.5-pro";
             setText("settingProvider", config.model_provider);
@@ -86,7 +285,7 @@
 
     async function loadHistory() {
         try {
-            var resp = await fetch("/api/history");
+            var resp = await fetchWithAuth("/api/history");
             var data = await resp.json();
             conversations = data.conversations || [];
             renderHistory();
