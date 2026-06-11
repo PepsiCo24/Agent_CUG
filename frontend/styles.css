@@ -130,10 +130,11 @@ html, body {
     display: block; font-size: 11px; color: var(--text-tertiary); margin-top: 2px;
 }
 .history-actions {
-    display: flex; gap: 4px; flex-shrink: 0; opacity: 0.6; transition: opacity var(--transition);
+    display: flex; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity .15s ease;
+    pointer-events: none;
 }
 .history-item:hover .history-actions {
-    opacity: 1;
+    opacity: 1; pointer-events: auto;
 }
 .history-action-btn {
     padding: 4px; border: none; background: transparent; color: var(--text-tertiary);
