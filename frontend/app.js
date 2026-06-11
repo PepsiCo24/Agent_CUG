@@ -220,7 +220,17 @@
         });
 
 
-        // Auth overlay events
+                // Auth modal social buttons
+        var authQQ = document.querySelector(".auth-social-btn.qq");
+        if (authQQ) authQQ.addEventListener("click", function() {
+            showAuthError("QQ登录功能开发中，请使用账号密码登录");
+        });
+        var authWX = document.querySelector(".auth-social-btn.wx");
+        if (authWX) authWX.addEventListener("click", function() {
+            showAuthError("微信登录功能开发中，请使用账号密码登录");
+        });
+
+// Auth overlay events
         var closeBtn = document.getElementById("authClose");
         if (closeBtn) closeBtn.addEventListener("click", function() { showAuth(false); });
 
