@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // Agent_CUG — ChatGPT 风格前端 JS
 // ============================================================
 
@@ -253,6 +253,7 @@
         document.getElementById("regPassword2").addEventListener("keydown", function(e) {
             if (e.key === "Enter") doRegister();
         });
+    }
 
     function fetchWithAuth(url, opts) {
         opts = opts || {};
