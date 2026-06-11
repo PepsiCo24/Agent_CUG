@@ -142,6 +142,7 @@ def create_app() -> FastAPI:
 
     # API 路由
     app.include_router(router)
+    app.include_router(auth_router)
 
     # 静态文件（前端）
     frontend_dir = Path(__file__).parent.parent / "frontend"
