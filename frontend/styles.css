@@ -1,4 +1,4 @@
-
+﻿
 /* ============================================================
    Agent_CUG — 精仿 ChatGPT Dark Theme
    基于 ChatGPT 真实 CSS 变量和 Tailwind prose 排版
@@ -666,18 +666,109 @@ html, body {
 [data-theme="light"] .icon-sun { display: block; }
 [data-theme="light"] .icon-moon { display: none; }
 
-/* ====== Auth ====== */
-.user-btn {
-    position: fixed; top: 12px; right: 16px; z-index: 100;
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface-secondary); border: 1px solid var(--border-medium);
-    color: var(--text-primary); padding: 6px 14px; border-radius: 20px;
-    cursor: pointer; font-size: 13px; transition: all .15s;
+/* ====== ChatGPT 风格用户菜单 ====== */
+.user-menu-wrapper {
+    position: relative;
 }
-.user-btn:hover { background: var(--surface-tertiary); }
-.user-btn svg { opacity: .7; }
-.sidebar-user { padding: 10px 16px; border-top: 1px solid var(--border-light); color: var(--text-tertiary); font-size: 12px; }
+.user-menu-btn {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 8px 10px; background: transparent; border: none;
+    border-radius: var(--radius-md); color: var(--text-primary);
+    cursor: pointer; font-size: 13px; transition: background var(--transition);
+}
+.user-menu-btn:hover { background: var(--surface-secondary); }
+.user-menu-btn.open { background: var(--surface-secondary); }
 
+.user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--surface-tertiary); display: flex; align-items: center;
+    justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.user-avatar.large {
+    width: 40px; height: 40px; font-size: 22px;
+}
+
+.user-menu-text {
+    flex: 1; text-align: left; overflow: hidden;
+}
+.user-menu-name {
+    display: block; font-size: 13px; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.user-menu-chevron {
+    flex-shrink: 0; color: var(--text-tertiary); transition: transform var(--transition);
+}
+.user-menu-btn.open .user-menu-chevron { transform: rotate(180deg); }
+
+/* 弹出面板 */
+.user-panel {
+    position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 8px;
+    background: var(--surface-primary); border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg); box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    overflow: hidden; z-index: 50; animation: panelSlideUp 0.15s ease;
+}
+@keyframes panelSlideUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.user-panel-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border-light);
+}
+.user-panel-info { overflow: hidden; }
+.user-panel-name {
+    font-size: 14px; font-weight: 600; color: var(--text-primary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.user-panel-email {
+    font-size: 12px; color: var(--text-tertiary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.user-panel-body { padding: 8px; }
+.panel-hint {
+    padding: 8px 12px; font-size: 12px; color: var(--text-tertiary);
+    text-align: center; margin-bottom: 4px;
+}
+.panel-btn {
+    display: block; width: 100%; padding: 10px 14px; margin-bottom: 4px;
+    background: transparent; border: none; border-radius: var(--radius-sm);
+    color: var(--text-primary); font-size: 14px; cursor: pointer;
+    text-align: left; transition: background var(--transition);
+}
+.panel-btn:hover { background: var(--surface-secondary); }
+.panel-btn.primary {
+    background: var(--brand-purple); color: #fff; text-align: center;
+    font-weight: 500; border-radius: var(--radius-md);
+}
+.panel-btn.primary:hover { opacity: .9; }
+
+.panel-divider {
+    display: flex; align-items: center; margin: 8px 0; color: var(--text-tertiary);
+    font-size: 11px;
+}
+.panel-divider::before, .panel-divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--border-light);
+}
+.panel-divider span { padding: 0 10px; }
+
+.panel-social {
+    display: flex; gap: 6px; padding: 4px 0;
+}
+.panel-social .social-btn {
+    flex: 1; padding: 8px; border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm); background: var(--surface-secondary);
+    color: var(--text-primary); font-size: 12px; cursor: pointer;
+    text-align: center; transition: background var(--transition);
+}
+.panel-social .social-btn:hover { background: var(--surface-tertiary); }
+.panel-social .social-btn.qq { color: #12b7f5; }
+.panel-social .social-btn.wx { color: #07c160; }
+
+/* ====== Auth Modal ====== */
 .auth-overlay {
     position: fixed; inset: 0; z-index: 999;
     background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center;

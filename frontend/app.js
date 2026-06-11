@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Agent_CUG — ChatGPT 风格前端 JS
 // ============================================================
 
@@ -95,12 +95,31 @@
     function updateUserUI() {
         var display = document.getElementById("userNameDisplay");
         var sidebarName = document.getElementById("sidebarUserName");
+        var panelName = document.getElementById("panelUserName");
+        var panelEmail = document.getElementById("panelUserEmail");
+        var avatar = document.getElementById("userAvatar");
+        var panelAvatar = document.querySelector(".user-panel-header .user-avatar");
+        var loggedOut = document.getElementById("panelLoggedOut");
+        var loggedIn = document.getElementById("panelLoggedIn");
+
         if (currentUser && currentUser.username) {
             if (display) display.textContent = currentUser.username;
             if (sidebarName) sidebarName.textContent = currentUser.username;
+            if (panelName) panelName.textContent = currentUser.username;
+            if (panelEmail) panelEmail.textContent = currentUser.email || "";
+            if (avatar) avatar.textContent = (currentUser.username || "U").charAt(0).toUpperCase();
+            if (panelAvatar) panelAvatar.textContent = (currentUser.username || "U").charAt(0).toUpperCase();
+            if (loggedOut) loggedOut.style.display = "none";
+            if (loggedIn) loggedIn.style.display = "block";
         } else {
             if (display) display.textContent = "登录";
             if (sidebarName) sidebarName.textContent = "未登录";
+            if (panelName) panelName.textContent = "未登录";
+            if (panelEmail) panelEmail.textContent = "";
+            if (avatar) avatar.textContent = "🤖";
+            if (panelAvatar) panelAvatar.textContent = "🤖";
+            if (loggedOut) loggedOut.style.display = "block";
+            if (loggedIn) loggedIn.style.display = "none";
         }
     }
 
@@ -116,12 +135,84 @@
 
     // ====== Auth Event Handlers ======
     function setupAuthEvents() {
-        var userBtn = document.getElementById("userBtn");
-        if (userBtn) userBtn.addEventListener("click", function() {
-            if (currentUser) { if (confirm("确定要退出登录吗？")) doLogout(); }
-            else showAuth(true);
+        // ChatGPT 风格用户菜单按钮 — 点击切换面板
+        var userMenuBtn = document.getElementById("userMenuBtn");
+        var userPanel = document.getElementById("userPanel");
+        if (userMenuBtn && userPanel) {
+            userMenuBtn.addEventListener("click", function(e) {
+                e.stopPropagation();
+                var isOpen = userPanel.style.display === "block";
+                userPanel.style.display = isOpen ? "none" : "block";
+                userMenuBtn.classList.toggle("open", !isOpen);
+            });
+            // 点击面板外部关闭
+            document.addEventListener("click", function(e) {
+                if (!userMenuBtn.contains(e.target) && !userPanel.contains(e.target)) {
+                    userPanel.style.display = "none";
+                    userMenuBtn.classList.remove("open");
+                }
+            });
+        }
+
+        // 面板内按钮
+        var panelLoginBtn = document.getElementById("panelLoginBtn");
+        if (panelLoginBtn) panelLoginBtn.addEventListener("click", function() {
+            userPanel.style.display = "none";
+            userMenuBtn.classList.remove("open");
+            // 切换到登录 tab
+            var tabs = document.querySelectorAll(".auth-tab");
+            tabs.forEach(function(x) { x.classList.remove("active"); });
+            tabs[0].classList.add("active");
+            document.getElementById("loginForm").style.display = "block";
+            document.getElementById("registerForm").style.display = "none";
+            document.getElementById("authError").style.display = "none";
+            showAuth(true);
         });
 
+        var panelRegBtn = document.getElementById("panelRegBtn");
+        if (panelRegBtn) panelRegBtn.addEventListener("click", function() {
+            userPanel.style.display = "none";
+            userMenuBtn.classList.remove("open");
+            // 切换到注册 tab
+            var tabs = document.querySelectorAll(".auth-tab");
+            tabs.forEach(function(x) { x.classList.remove("active"); });
+            tabs[1].classList.add("active");
+            document.getElementById("loginForm").style.display = "none";
+            document.getElementById("registerForm").style.display = "block";
+            document.getElementById("authError").style.display = "none";
+            showAuth(true);
+        });
+
+        var panelLogoutBtn = document.getElementById("panelLogoutBtn");
+        if (panelLogoutBtn) panelLogoutBtn.addEventListener("click", function() {
+            userPanel.style.display = "none";
+            userMenuBtn.classList.remove("open");
+            doLogout();
+        });
+
+        var panelSettingBtn = document.getElementById("panelSettingBtn");
+        if (panelSettingBtn) panelSettingBtn.addEventListener("click", function() {
+            userPanel.style.display = "none";
+            userMenuBtn.classList.remove("open");
+            // 切换到设置面板
+            var navItems = document.querySelectorAll(".sidebar-nav-item");
+            navItems.forEach(function(x) { x.classList.remove("active"); });
+            var settingsNav = document.querySelector('[data-panel="settings"]');
+            if (settingsNav) settingsNav.classList.add("active");
+            switchPanel("settings");
+        });
+
+        // Panel social buttons
+        var panelQQ = document.querySelector(".panel-social .social-btn.qq");
+        if (panelQQ) panelQQ.addEventListener("click", function() {
+            showAuthError("QQ登录功能开发中，请使用账号密码登录");
+        });
+        var panelWX = document.querySelector(".panel-social .social-btn.wx");
+        if (panelWX) panelWX.addEventListener("click", function() {
+            showAuthError("微信登录功能开发中，请使用账号密码登录");
+        });
+
+        // Auth overlay events
         var closeBtn = document.getElementById("authClose");
         if (closeBtn) closeBtn.addEventListener("click", function() { showAuth(false); });
 
@@ -155,14 +246,6 @@
             if (e.key === "Enter") doRegister();
         });
 
-        // Social login placeholders
-        document.querySelector(".social-btn.qq").addEventListener("click", function() {
-            showAuthError("QQ登录功能开发中，请使用账号密码登录");
-        });
-        document.querySelector(".social-btn.wx").addEventListener("click", function() {
-            showAuthError("微信登录功能开发中，请使用账号密码登录");
-        });
-
         // QR login
         var qrBtn = document.getElementById("qrLoginBtn");
         if (qrBtn) qrBtn.addEventListener("click", async function() {
@@ -172,7 +255,6 @@
                 var data = await fetch("/api/auth/qr/generate").then(function(r) { return r.json(); });
                 var qrEl = qrDisplay.querySelector(".qr-placeholder");
                 qrEl.innerHTML = '<div style="font-size:12px;text-align:center">QR ID:<br>' + data.qr_id.substring(0,12) + '...<br><br>请在手机端确认</div>';
-                // Poll for QR scan
                 var pollCount = 0;
                 var interval = setInterval(async function() {
                     pollCount++;
