@@ -1,4 +1,4 @@
-﻿name: Deploy to Alibaba Cloud
+name: Deploy to Alibaba Cloud
 
 on:
   push:
@@ -16,9 +16,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /root/Agent_CUG
-            git pull origin $(git rev-parse --abbrev-ref HEAD)
-            pkill -f "uvicorn app.main" || true
-            sleep 1
-            nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
+            git checkout -- .
+            git pull origin master
+            pkill -f gunicorn || true
             sleep 2
-            curl -s http://localhost:8000/api/health
+            /root/Agent_CUG/venv/bin/python3 /root/Agent_CUG/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:5000 app.main:app --daemon
+            sleep 3
+            curl -s http://localhost:5000/api/health
