@@ -40,10 +40,35 @@ def setup_logging() -> None:
     logging.getLogger("chromadb").setLevel(logging.WARNING)
 
 
+
+def _validate_api_keys() -> None:
+    """启动时校验 API Key 配置"""
+    settings = get_settings()
+    errors = []
+    if not settings.llm.API_KEY or settings.llm.API_KEY.startswith("your-"):
+        errors.append("LLM_API_KEY 未配置 (provider=" + settings.MODEL_PROVIDER + ")")
+    if not settings.embedding.API_KEY or settings.embedding.API_KEY.startswith("your-"):
+        errors.append("EMBEDDING_API_KEY 未配置")
+    if errors:
+        msg = "\n  ".join(errors)
+        logger.error("=" * 60)
+        logger.error("API Key 配置错误:")
+        logger.error("  %s", msg)
+        logger.error("")
+        logger.error("解决方法:")
+        logger.error("  cp .env.example .env")
+        logger.error("  填入真实 API Key")
+        logger.error("  重启服务")
+        logger.error("=" * 60)
+        raise RuntimeError("API Key 未配置:\n  " + msg)
+    logger.info("API Key 校验通过")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期"""
     setup_logging()
+    _validate_api_keys()
     logger.info("Agent_CUG v1.0.0 启动中...")
     logger.info("LLM Provider: %s", get_settings().MODEL_PROVIDER)
     logger.info("LLM Model: %s", get_settings().llm.MODEL)
