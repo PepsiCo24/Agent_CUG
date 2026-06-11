@@ -41,6 +41,7 @@ def _clean_answer(text: str) -> str:
     text = re.sub(r"([a-zA-Z0-9])([\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef])", r"\1 \2", text)
     # Remove single newlines between CJK characters (tokenizer artifact)
     text = re.sub(r"([\u4e00-\u9fff\u3400-\u4dbf])\n([\u4e00-\u9fff\u3400-\u4dbf])", r"\1\2", text)
+    text = re.sub(r"([a-zA-Z])\n([a-zA-Z])", r"\1\2", text)
     # Collapse multiple spaces
     text = re.sub(r"  +", " ", text)
     # Trim each line

@@ -557,9 +557,11 @@
     function cleanText(text) {
         if (!text) return text;
         text = text.replace(/(\d) (\d)/g, "$1$2");
+        text = text.replace(/([a-zA-Z])\n([a-zA-Z])/g, "$1$2");
         text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf])([a-zA-Z0-9])/g, "$1 $2");
         text = text.replace(/([a-zA-Z0-9])([\u4e00-\u9fff\u3400-\u4dbf])/g, "$1 $2");
         text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf])\n([\u4e00-\u9fff\u3400-\u4dbf])/g, "$1$2");
+        text = text.replace(/([a-zA-Z])\n([a-zA-Z])/g, "$1$2");
         text = text.replace(/  +/g, " ");
         text = text.split("\n").map(function(l) { return l.trim(); }).join("\n");
         return text;
