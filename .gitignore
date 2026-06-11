@@ -40,3 +40,7 @@ node_modules/
 # 日志
 logs/
 *.log
+
+# Deploy keys
+deploy_key
+deploy_key.pub

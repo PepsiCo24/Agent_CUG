@@ -1,0 +1,15 @@
+[Unit]
+Description=Agent_CUG AI Assistant
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Agent_CUG
+EnvironmentFile=/root/Agent_CUG/.env
+ExecStart=python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

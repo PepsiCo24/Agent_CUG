@@ -1,178 +1,159 @@
-﻿# Agent_CUG — Agent Operating System
+# Agent_CUG — 智能 AI 助手
 
-> 🚀 个人研发 + 科研学习 + 企业级扩展的 Agent 操作系统
+> 基于 LangGraph + ReAct 的 Agent 操作系统，支持多模型、RAG、工具调用、记忆系统
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)](https://fastapi.tiangolo.com)
+[![LangGraph](https://img.shields.io/badge/LangGraph-0.2-orange)](https://langchain-ai.github.io/langgraph/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-PepsiCo24/Agent__CUG-black)](https://github.com/PepsiCo24/Agent_CUG)
+[![Tests](https://img.shields.io/badge/Tests-61%20passed-brightgreen)]()
+[![GitHub](https://img.shields.io/badge/GitHub-PepsiCo24%2FAgent__CUG-black?logo=github)](https://github.com/PepsiCo24/Agent_CUG)
 
 ---
 
-## 📋 项目概述
+## 功能特性
 
-Agent_CUG 是一个可持续演进的 **Agent Operating System**，从 Level 2 Agent 起步，逐步演进为支持 GraphRAG、Multi-Agent、Workflow Engine 等高级特性的完整 Agent 平台。
+### 核心能力
 
-### 当前阶段：Level 2 Agent
+| 功能 | 说明 |
+|------|------|
+| 智能对话 | 支持流式 (SSE) 和非流式聊天，Markdown 富文本渲染 |
+| RAG 检索增强 | 文档上传 → 智能分块 → 向量检索 → 重排序 → LLM 回答 |
+| 工具调用 | 计算器、时间查询、知识库检索、网络搜索 |
+| 记忆系统 | 短期记忆 (SQLite) + 长期记忆 (Chroma)，自动去重与过期清理 |
+| 多模型支持 | Mimo / OpenAI / DeepSeek / Qwen / Claude，统一接口即插即用 |
+| 思考过程 | 复杂问题自动展示推理链，可折叠查看 |
 
-| 模块 | 状态 | 说明 |
-|------|------|------|
-| Chat Agent | ✅ | 基于 LangGraph + ReAct |
-| RAG | ✅ | 文档加载 → 分块 → Chroma → 检索 → 重排序 |
-| Memory | ✅ | 短期记忆(SQLite) + 长期记忆(Chroma) |
-| Tool Calling | ✅ | 统一工具接口(计算器、时间) |
-| ReAct | ✅ | Reasoning + Acting 工作流 |
-| LangGraph | ✅ | 状态图编排 |
-| FastAPI | ✅ | RESTful API + SSE 流式 |
-| Web UI | ✅ | SPA + 原生JS + ChatGPT 风格 |
+### 技术架构
 
----
-
-## 🏗️ 架构
-
-`
-┌──────────────────────────────────────────────┐
-│                  Web UI (SPA)                 │
-│              SSE Streaming Chat              │
-├──────────────────────────────────────────────┤
-│                FastAPI Backend                │
-├──────────┬──────────┬──────────┬─────────────┤
-│  Agent   │   RAG    │  Memory  │    Tools    │
-│ LangGraph│ Chroma   │  SQLite  │ Calculator  │
-│  ReAct   │ Retriever│  Chroma  │    Time     │
-├──────────┴──────────┴──────────┴─────────────┤
-│           LLM Adapter / Embedding Adapter     │
-│       Mimo · OpenAI · DeepSeek · Qwen        │
-└──────────────────────────────────────────────┘
-`
+```
+Web UI (SPA)  ←→  FastAPI Backend  ←→  LangGraph Agent
+                      ↕                    ↕
+                 SSE Streaming        ReAct Workflow
+                      ↕                    ↕
+              ┌───────┴────────┬───────────┴──────────┐
+              │    RAG         │    Memory   │  Tools  │
+              │ Chroma + Rank  │ SQLite+Chroma│ Calc   │
+              └────────────────┴─────────────┴─────────┘
+```
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
-### 1. 环境准备
+### 环境要求
 
-`ash
-# Python 3.12+
-python --version
+- Python 3.12+
+- Git
+
+### 安装
+
+```bash
+# 克隆项目
+git clone https://github.com/PepsiCo24/Agent_CUG.git
+cd Agent_CUG
 
 # 创建虚拟环境
 python -m venv .venv
-.venv\Scripts\activate  # Windows
+
+# 激活虚拟环境
+.venv\Scripts\activate     # Windows
 # source .venv/bin/activate  # Linux/Mac
 
 # 安装依赖
 pip install -r requirements.txt
-`
+```
 
-### 2. 配置环境变量
+### 配置
 
-`ash
-# 复制配置模板
-copy .env.example .env   # Windows
-# cp .env.example .env    # Linux/Mac
+```bash
+# 复制环境变量模板
+copy .env.example .env     # Windows
+# cp .env.example .env      # Linux/Mac
 
-# 编辑 .env 填入真实 API Key
-`
+# 编辑 .env，填入 API Key
+# LLM_API_KEY=your_key_here
+# EMBEDDING_API_KEY=your_key_here
+```
 
-### 3. 启动服务
+### 启动
 
-`ash
+```bash
+# 开发模式（热重载）
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-`
 
-### 4. 访问
+# 生产模式
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
-打开浏览器访问 http://localhost:8000
-
----
-
-## 📁 项目结构
-
-`
-Agent_CUG/
-├── app/            # FastAPI 应用入口
-│   └── main.py
-├── api/            # API 路由 & Schema
-│   ├── routes.py
-│   └── schemas.py
-├── agent/          # Agent 工作流
-│   ├── state.py    # LangGraph State
-│   └── __init__.py # ReAct Workflow
-├── rag/            # RAG 流水线
-│   ├── loaders.py  # PDF/DOCX/TXT/MD
-│   ├── chunker.py
-│   ├── retriever.py
-│   └── reranker.py
-├── memory/         # 记忆系统
-│   └── __init__.py # SQLite + Chroma
-├── tools/          # 工具框架
-│   └── __init__.py # Calculator, Time
-├── llm/            # LLM Adapter
-│   └── __init__.py
-├── embedding/      # Embedding Adapter
-│   └── __init__.py
-├── prompt/         # Prompt 模板
-│   └── __init__.py
-├── core/           # 抽象基类
-│   └── base.py
-├── config/         # 配置管理
-│   └── settings.py
-├── frontend/       # Web UI
-│   ├── index.html
-│   ├── styles.css
-│   └── app.js
-├── tests/          # 测试
-├── docs/           # 文档
-├── .env.example    # 环境变量模板
-├── .gitignore
-├── requirements.txt
-└── README.md
-`
+浏览器打开 **http://localhost:8000** 即可使用。
 
 ---
 
-## 🔧 API 端点
+## API 端点
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | /api/health | 健康检查 |
-| POST | /api/chat | 同步聊天 |
-| POST | /api/chat/stream | SSE 流式聊天 |
-| POST | /api/rag/query | RAG 检索 |
-| POST | /api/rag/upload | 文件上传到知识库 |
-| GET | /api/history | 对话历史 |
-| GET | /api/config | 系统配置 |
-| GET | / | Web UI |
+| `GET` | `/api/health` | 健康检查 + 文档数量 |
+| `GET` | `/api/config` | 系统配置 |
+| `POST` | `/api/chat` | 同步聊天 |
+| `POST` | `/api/chat/stream` | SSE 流式聊天 |
+| `POST` | `/api/rag/query` | RAG 文档检索 |
+| `POST` | `/api/rag/upload` | 上传文档到知识库 |
+| `GET` | `/api/history` | 对话历史列表 |
+| `GET` | `/api/history/{id}` | 对话详情 |
+| `PUT` | `/api/history/{id}/title` | 重命名对话 |
+| `DELETE` | `/api/history/{id}` | 删除对话 |
+| `GET` | `/` | Web UI 前端 |
 
 ---
 
-## 🎯 设计原则
+## 项目结构
 
-- **Clean Architecture** — 分层解耦
-- **SOLID** — 依赖抽象而非具体实现
-- **DDD** — 领域驱动设计
-- **Dependency Injection** — 工厂模式
-- **安全第一** — API Key 仅通过环境变量
+```
+Agent_CUG/
+├── app/            # FastAPI 入口 + 生命周期管理
+├── api/            # API 路由 + Pydantic Schema
+├── agent/          # LangGraph 工作流 (Router → RAG → Tools → LLM)
+├── rag/            # RAG 流水线 (加载 → 分块 → 检索 → 重排序)
+├── memory/         # 记忆系统 (SQLite 短期 + Chroma 长期)
+├── tools/          # 工具注册表 (计算器、时间、搜索、知识库)
+├── llm/            # LLM 适配器 (Mimo/OpenAI/DeepSeek/Qwen/Claude)
+├── embedding/      # Embedding 适配器 (SiliconFlow/OpenAI)
+├── prompt/         # Prompt 模板集中管理
+├── core/           # 抽象基类 (SOLID 原则)
+├── config/         # Pydantic Settings 配置管理
+├── frontend/       # Web UI (ChatGPT 风格)
+├── tests/          # 测试 (61 个用例)
+├── .env.example    # 环境变量模板
+└── requirements.txt
+```
 
 ---
 
-## 📝 License
+## 设计原则
 
-MIT © 2026 Agent_CUG
+- **Clean Architecture** — 分层解耦，依赖倒置
+- **SOLID** — 面向接口编程，工厂模式注入
+- **安全第一** — API Key 仅通过环境变量，禁止硬编码
+- **单例模式** — ChromaDB / RAGPipeline / MemoryManager 共享连接池
 
+---
 
 ## 更新日志
 
 ### v1.1.0 (2026-06)
-- LLM 调用增加自动重试机制
-- ChromaDB 全局单例模式，避免重复创建客户端
-- RAGPipeline 单例模式
-- MemoryManager 共享 Chroma 连接
-- 历史记录持久化到 JSON 文件
-- 前端增强：删除/重命名对话、自动滚动、暗色模式检测、Ctrl+Enter 快捷键
-- 优雅关闭机制
-- 配置验证
-- 会话导出 API
-- 工具使用统计
-- 更多单元测试和集成测试覆盖
+
+- LLM 调用自动重试机制（指数退避）
+- ChromaDB / RAGPipeline 全局单例
+- 历史记录 JSON 持久化
+- 前端：删除/重命名对话、暗色模式、Ctrl+Enter 快捷键
+- 配置验证 + 优雅关闭
+- 文本排版智能修复（数字空格、中英文间距）
+- 61 项自动化测试覆盖
+
+---
+
+## License
+
+MIT © 2026 Agent_CUG

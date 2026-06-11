@@ -444,7 +444,7 @@
             if (contentEl) {
                 contentEl.classList.remove("streaming-cursor");
                 // ??????????? tokenizer ???
-                fullText = fullText.replace(/(\d) (\d)/g, "$1$2");
+                fullText = cleanText(fullText);
                 contentEl.innerHTML = renderFinal(fullText, toolCalls);
             }
             messages.push({ role: "assistant", content: fullText });
@@ -531,11 +531,11 @@
         var html = "";
         if (toolCalls && toolCalls.length > 0) {
             for (var i = 0; i < toolCalls.length; i++) {
-                html += "<div class=\"tool-call-display\">" +
-                    "<div class=\"tool-name\">\ud83d\udd27 " + escHtml(toolCalls[i].name || "tool") + "</div>" +
+                html += "<div class=\"tool-call-display\">"
                     "<div class=\"tool-result\">" + escHtml(String(toolCalls[i].result || "")) + "</div></div>";
             }
         }
+        text = cleanText(text);
         html += renderContentWithThinking(text);
         el.innerHTML = html;
         el.classList.add("streaming-cursor");
@@ -545,13 +545,24 @@
         var html = "";
         if (toolCalls && toolCalls.length > 0) {
             for (var i = 0; i < toolCalls.length; i++) {
-                html += "<div class=\"tool-call-display\">" +
-                    "<div class=\"tool-name\">\ud83d\udd27 " + escHtml(toolCalls[i].name || "tool") + "</div>" +
+                html += "<div class=\"tool-call-display\">"
                     "<div class=\"tool-result\">" + escHtml(String(toolCalls[i].result || "")) + "</div></div>";
             }
         }
         html += renderContentWithThinking(text);
         return html;
+    }
+
+
+    function cleanText(text) {
+        if (!text) return text;
+        text = text.replace(/(\d) (\d)/g, "$1$2");
+        text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf])([a-zA-Z0-9])/g, "$1 $2");
+        text = text.replace(/([a-zA-Z0-9])([\u4e00-\u9fff\u3400-\u4dbf])/g, "$1 $2");
+        text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf])\n([\u4e00-\u9fff\u3400-\u4dbf])/g, "$1$2");
+        text = text.replace(/  +/g, " ");
+        text = text.split("\n").map(function(l) { return l.trim(); }).join("\n");
+        return text;
     }
 
     function renderContentWithThinking(text) {

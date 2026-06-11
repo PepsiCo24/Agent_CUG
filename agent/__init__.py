@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Workflow — LangGraph + ReAct 实现
 
 工作流：
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any, AsyncIterator, Literal
 
 from langgraph.graph import END, StateGraph
@@ -27,6 +28,24 @@ from tools import ToolRegistry, create_tool_registry
 
 logger = logging.getLogger(__name__)
 
+
+
+def _clean_answer(text: str) -> str:
+    """Clean up LLM output: fix spacing, normalization artifacts"""
+    if not text:
+        return text
+    # Remove spaces between digits (tokenizer artifact: "4 053" -> "4053")
+    text = re.sub(r"(?<=\d) (?=\d)", "", text)
+    # Add space between CJK and Latin/numbers
+    text = re.sub(r"([\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef])([a-zA-Z0-9])", r"\1 \2", text)
+    text = re.sub(r"([a-zA-Z0-9])([\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef])", r"\1 \2", text)
+    # Remove single newlines between CJK characters (tokenizer artifact)
+    text = re.sub(r"([\u4e00-\u9fff\u3400-\u4dbf])\n([\u4e00-\u9fff\u3400-\u4dbf])", r"\1\2", text)
+    # Collapse multiple spaces
+    text = re.sub(r"  +", " ", text)
+    # Trim each line
+    text = "\n".join(line.strip() for line in text.split("\n"))
+    return text
 
 class AgentWorkflow:
     """Agent 工作流引擎"""
@@ -381,9 +400,8 @@ class AgentWorkflow:
             full_answer += token
             yield token
 
-        # ??????????? tokenizer ???? "4 053" ?????
-        import re as _re
-        full_answer = _re.sub(r"(?<=\d) (?=\d)", "", full_answer)
+        # Clean text formatting artifacts (number spacing, CJK breaks, etc.)
+        full_answer = _clean_answer(full_answer)
 
         # 保存记忆
         await self._memory.add(MemoryItem(
