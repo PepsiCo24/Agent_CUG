@@ -67,13 +67,22 @@ async def login(body: LoginRequest):
     )
 
 
-@auth_router.get("/me", response_model=UserInfo)
-async def me(user: UserInfo | None = None):
-    """Get current user info from JWT"""
-    # This is handled by dependency injection
-    # For now, extract from header in a simple way
-    from fastapi import Request, Depends
-    return {"id": "", "username": "", "email": ""}
+@auth_router.get("/me")
+async def me(request = None):
+    """Get current user from JWT in Authorization header"""
+    from fastapi import Request
+    if not request:
+        return {"authenticated": False, "user": None}
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        from auth import decode_jwt, get_user_by_id
+        payload = decode_jwt(token)
+        if payload:
+            user = get_user_by_id(payload["sub"])
+            if user:
+                return {"authenticated": True, "user": {"id": user["id"], "username": user["username"], "email": user.get("email", "")}}
+    return {"authenticated": False, "user": None}
 
 
 @auth_router.get("/qr/generate", response_model=QRCodeResponse)
