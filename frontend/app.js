@@ -4,7 +4,6 @@
 
 (function () {
     "use strict";
-    "use strict";
 
 
     // ====== Auth State ======
@@ -585,11 +584,10 @@ var uploadedFiles = [];  // Track uploaded documents
             if (btn) {
                 var code = btn.dataset.code || "";
                 copyToClipboard(code).then(function () {
-    "use strict";
                     btn.textContent = "\u2713 \u5df2\u590d\u5236";
                     btn.classList.add("copied");
                     setTimeout(function () {
-    "use strict"; btn.textContent = "\u590d\u5236"; btn.classList.remove("copied"); }, 2000);
+    btn.textContent = "\u590d\u5236"; btn.classList.remove("copied"); }, 2000);
                 });
             }
         });
@@ -814,7 +812,7 @@ var uploadedFiles = [];  // Track uploaded documents
             });
             if (!response.ok) {
                 var errData = await response.json().catch(function () {
-    "use strict"; return {}; });
+    return {}; });
                 throw new Error(errData.detail || "\u8bf7\u6c42\u5931\u8d25: " + response.status);
             }
 
@@ -932,11 +930,9 @@ var uploadedFiles = [];  // Track uploaded documents
             copyBtn.addEventListener("click", function () {
                 var txt = contentDiv.textContent || "";
                 copyToClipboard(txt).then(function () {
-    "use strict";
                     copyBtn.classList.add("copied");
                     copyBtn.querySelector("span").textContent = "✓ 已复制";
                     setTimeout(function () {
-    "use strict";
                         copyBtn.classList.remove("copied");
                         copyBtn.querySelector("span").textContent = "复制";
                     }, 2000);
@@ -1384,7 +1380,7 @@ function renderFinal(text, toolCalls) {
         }).then(function (response) {
             if (!response.ok) {
                 return response.json().catch(function () {
-    "use strict"; return {}; }).then(function (errData) {
+    return {}; }).then(function (errData) {
                     throw new Error(errData.detail || "????: " + response.status);
                 });
             }
@@ -1461,7 +1457,6 @@ function renderFinal(text, toolCalls) {
 
 function scrollToBottom() {
         requestAnimationFrame(function () {
-    "use strict";
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
     }

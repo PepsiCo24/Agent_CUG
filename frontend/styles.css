@@ -414,18 +414,7 @@ html, body {
 
 /* ====== 杈撳叆鍖哄煙 鈥?ChatGPT 椋庢牸 ====== */
 
-/* Document Tags */
-.doc-tags-area {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    margin: 0 16px 8px;
-    border-radius: 12px;
-    background: var(--surface-secondary, #f0f0f0);
-    border: 1px solid var(--border-color, #e0e0e0);
-    flex-wrap: wrap;
-}
+
 .doc-tags-icon { font-size: 16px; }
 .doc-tags-text { font-size: 13px; color: var(--text-secondary, #666); }
 .doc-tags-list { display: flex; gap: 6px; flex-wrap: wrap; }
