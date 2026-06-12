@@ -247,7 +247,7 @@ html, body {
 
 .message-inner {
     display: flex; gap: 20px; align-items: flex-start;
-    width: 100%; min-width: 0;
+    width: calc(100% - 48px); min-width: 0;
 }
 
 /* 澶村儚 */
@@ -343,7 +343,7 @@ html, body {
 
 /* 琛ㄦ牸 */
 .message-content table {
-    width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px;
+    width: calc(100% - 48px); border-collapse: collapse; margin: 12px 0; font-size: 14px;
 }
 .message-content th, .message-content td {
     padding: 8px 12px; border: 1px solid var(--border-medium); text-align: left;
@@ -666,7 +666,7 @@ html, body {
     color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin: 0;
 }
 .custom-modal-input {
-    width: 100%; padding: 10px 12px; border: 1px solid var(--border-light);
+    width: calc(100% - 48px); padding: 10px 12px; border: 1px solid var(--border-light);
     border-radius: var(--radius-sm); background: var(--surface-secondary);
     color: var(--text-primary); font-size: 14px; outline: none;
     box-sizing: border-box;
@@ -731,7 +731,7 @@ html, body {
 }
 /* Inline edit textarea */
 .message-edit-textarea {
-    width: 100%;
+    width: calc(100% - 48px);
     min-height: 60px;
     padding: 8px 12px;
     border: 1px solid var(--border-strong);
@@ -977,7 +977,7 @@ html, body {
 .auth-label-opt { color: var(--text-tertiary); font-weight: 400; }
 
 .auth-form input {
-    width: 100%; padding: 10px 14px;
+    width: calc(100% - 48px); padding: 10px 14px;
     background: var(--surface-primary); border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm); color: var(--text-primary); font-size: 14px;
     outline: none; box-sizing: border-box; transition: border-color var(--transition);
@@ -1147,11 +1147,13 @@ html, body {
 /* ====== Inline document tags in chat ====== */
 .doc-tags-area {
     display: flex; align-items: center; gap: 8px;
-    padding: 8px 16px; background: var(--surface-secondary);
-    border-top: 1px solid var(--border-light); flex-wrap: wrap;
+    padding: 10px 14px; margin: 0 auto 8px;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    flex-wrap: wrap;
     max-width: var(--thread-content-max-width);
     width: calc(100% - 48px);
-    margin: 0 auto;
     box-sizing: border-box;
 }
 .doc-tags-icon { font-size: 14px; }
