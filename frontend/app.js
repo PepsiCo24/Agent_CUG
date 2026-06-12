@@ -980,7 +980,7 @@ function renderRagDocsBar(row, ragDocs, sentDocNames) {
     var header = document.createElement("div");
     header.className = "rag-docs-bar-header";
     header.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>' +
-        '<span>??? ' + ragDocs.length + ' ?????</span>';
+        '<span>已检索 ' + ragDocs.length + ' 篇相关文档</span>';
     bar.appendChild(header);
 
     // Doc list
@@ -989,7 +989,7 @@ function renderRagDocsBar(row, ragDocs, sentDocNames) {
     for (var i = 0; i < ragDocs.length; i++) {
         var d = ragDocs[i];
         var scorePct = d.score ? (d.score * 100).toFixed(0) : "?";
-        var sourceName = d.source || "????";
+        var sourceName = d.source || "未知文档";
         // Truncate long source names
         if (sourceName.length > 40) sourceName = sourceName.substring(0, 37) + "...";
         var snippet = d.content_snippet ? escHtml(d.content_snippet) : "";
@@ -997,7 +997,7 @@ function renderRagDocsBar(row, ragDocs, sentDocNames) {
 
         var item = document.createElement("div");
         item.className = "rag-docs-bar-item";
-        item.title = "??: " + escHtml(d.source || "") + "\n???: " + scorePct + "%\n??: " + escHtml(d.content_snippet || "");
+        item.title = "来源: " + escHtml(d.source || "") + "\n相似度: " + scorePct + "%\n摘要: " + escHtml(d.content_snippet || "");
         item.innerHTML = '<span class="rag-docs-bar-icon">' + getDocIcon(sourceName) + '</span>' +
             '<span class="rag-docs-bar-name">' + escHtml(sourceName) + '</span>' +
             '<span class="rag-docs-bar-score">' + scorePct + '%</span>';
