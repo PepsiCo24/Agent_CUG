@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent_CUG — AI 助手</title>
-    <link rel="stylesheet" href="styles.css?v=1781240158">
+    <link rel="stylesheet" href="styles.css?v=1781241230">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
 </head>
 <body>
@@ -245,11 +245,11 @@
         </main>
     </div>
 
-    <script src="app.js?v=1781240158"></script>
+    <script src="app.js?v=1781241230"></script>
 
 
     <!-- ====== 登录/注册弹窗 ====== -->
-    <div class="auth-overlay" id="authOverlay" style="display:none">
+    <div class="auth-overlay" id="authOverlay" style="display:none" autocomplete="off">
         <div class="auth-modal">
             <button class="auth-close" id="authClose">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -275,7 +275,7 @@
                 </div>
                 <div class="auth-field">
                     <label class="auth-label" for="loginPassword">密码</label>
-                    <input type="password" id="loginPassword" placeholder="输入密码">
+                    <input type="text" style="display:none" autocomplete="username"><input type="password" id="loginPassword" placeholder="输入密码" autocomplete="current-password">
                 </div>
                 <button class="auth-btn primary" id="loginBtn">登 录</button>
             </div>
@@ -292,11 +292,11 @@
                 </div>
                 <div class="auth-field">
                     <label class="auth-label" for="regPassword">密码</label>
-                    <input type="password" id="regPassword" placeholder="至少 6 位">
+                    <input type="password" id="regPassword" placeholder="至少 6 位" autocomplete="new-password">
                 </div>
                 <div class="auth-field">
                     <label class="auth-label" for="regPassword2">确认密码</label>
-                    <input type="password" id="regPassword2" placeholder="再次输入密码">
+                    <input type="password" id="regPassword2" placeholder="再次输入密码" autocomplete="new-password">
                 </div>
                 <button class="auth-btn primary" id="regBtn">注 册</button>
             </div>
