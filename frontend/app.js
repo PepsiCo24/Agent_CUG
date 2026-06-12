@@ -337,11 +337,15 @@
     var loadedDocs = []; // all loaded documents
     
     // ====== Document Tag Management ======
-    function addDocTag(filename) {
+    function addDocTag(filename, docId) {
         for (var i = 0; i < uploadedFiles.length; i++) {
             if (uploadedFiles[i].name === filename) return;
         }
-        uploadedFiles.push({ name: filename, time: Date.now() });
+        uploadedFiles.push({ name: filename, time: Date.now(), doc_id: docId || "" });
+        // Auto-add to selectedDocIds so the document is used in chat
+        if (docId && selectedDocIds.indexOf(docId) < 0) {
+            selectedDocIds.push(docId);
+        }
         renderDocTags();
     }
 
@@ -771,8 +775,9 @@ var uploadedFiles = [];  // Track uploaded documents
         sendBtn.disabled = true;
         if (welcomeScreen) welcomeScreen.style.display = "none";
 
-        // Capture current doc info before clearing
+        // Capture current doc info before clearing (Gemini-style)
         var sentDocNames = [];
+        var sentDocIds = selectedDocIds.slice(); // Snapshot for display after clearing
         if (selectedDocIds.length > 0) {
             for (var di = 0; di < uploadedFiles.length; di++) {
                 sentDocNames.push(uploadedFiles[di].name);
@@ -793,6 +798,7 @@ var uploadedFiles = [];  // Track uploaded documents
 
         // Clear doc tags after sending (Gemini-style: hide upload window on dialog)
         uploadedFiles = [];
+        selectedDocIds = [];
         renderDocTags();
 
         try {
@@ -1497,7 +1503,7 @@ function scrollToBottom() {
             if (deviceId) headers["X-Device-Id"] = deviceId;
             var resp = await fetch("/api/rag/upload", { method: "POST", headers: headers, body: formData });
             var result = await resp.json();
-            if (resp.ok) addDocTag(file.name);
+            if (resp.ok) addDocTag(file.name, result.doc_id || "");
             showUploadStatus(resp.ok ? "success" : "error",
                 (resp.ok ? "\u2705 " : "\u274c ") + file.name + " \u2014 " + (result.chunks || 0) + " \u4e2a\u5206\u5757" +
                 (resp.ok ? "\u5df2\u5bfc\u5165" : " \u4e0a\u4f20\u5931\u8d25: " + (result.detail || "")));
