@@ -824,6 +824,8 @@ var uploadedFiles = [];  // Track uploaded documents
                 var chunk = await reader.read();
                 if (chunk.done) break;
                 buffer += decoder.decode(chunk.value, { stream: true });
+                // Normalize CRLF -> LF for consistent splitting
+                buffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
                 var lines = buffer.split("\n");
                 buffer = lines.pop() || "";
 
@@ -831,6 +833,11 @@ var uploadedFiles = [];  // Track uploaded documents
                 for (var i = 0; i < lines.length; i++) {
                     var line = lines[i];
                     if (line.startsWith("event: ")) {
+                        // Process previous event before overwriting
+                        if (currentEvent) {
+                            processEvent(currentEvent, currentData);
+                            currentEvent = null;
+                        }
                         currentEvent = line.slice(7).trim();
                         currentData = "";
                     } else if (line.startsWith("data: ")) {
@@ -1405,6 +1412,8 @@ function renderFinal(text, toolCalls) {
                         return;
                     }
                     buffer += decoder.decode(chunk.value, { stream: true });
+                    // Normalize CRLF
+                    buffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
                     var lines = buffer.split("\n");
                     buffer = lines.pop() || "";
 
@@ -1412,6 +1421,10 @@ function renderFinal(text, toolCalls) {
                     for (var i = 0; i < lines.length; i++) {
                         var line = lines[i];
                         if (line.startsWith("event: ")) {
+                            if (currentEvent) {
+                                processStreamEvent2(currentEvent, currentData);
+                                currentEvent = null;
+                            }
                             currentEvent = line.slice(7).trim();
                             currentData = "";
                         } else if (line.startsWith("data: ")) {
@@ -1431,6 +1444,8 @@ function renderFinal(text, toolCalls) {
             function processStreamEvent2(event, data) {
                 if (event === "token") {
                     fullText += data;
+                } else if (event === "rag_docs") {
+                    try { ragDocs = JSON.parse(data); renderRagDocsBar(assistantRow, ragDocs, []); } catch (e) {}
                 } else if (event === "tool_call") {
                     try { toolCalls.push(JSON.parse(data)); } catch (e) {}
                 } else if (event === "done") {
