@@ -634,7 +634,9 @@ var uploadedFiles = [];  // Track uploaded documents
     async function loadConversation(convId) {
         if (!convId) return;
         try {
-            var resp = await fetch("/api/history/" + convId);
+            var resp = await fetch("/api/history/" + convId, {
+                headers: authToken ? { "Authorization": "Bearer " + authToken } : {}
+            });
             if (!resp.ok) throw new Error("?????");
             var data = await resp.json();
             messages = data.messages || [];
@@ -705,7 +707,10 @@ var uploadedFiles = [];  // Track uploaded documents
             }
             renderHistory();
             // Confirm delete with server (rollback on failure)
-            fetch("/api/history/" + convId, { method: "DELETE" }).then(function (resp) {
+            fetch("/api/history/" + convId, {
+                method: "DELETE",
+                headers: authToken ? { "Authorization": "Bearer " + authToken } : {}
+            }).then(function (resp) {
                 delete _pendingDeletes[convId];
                 if (!resp.ok) loadHistory();
             }).catch(function (e) {
@@ -721,9 +726,11 @@ var uploadedFiles = [];  // Track uploaded documents
         if (!convId) return;
         showModal("重命名对话", "请输入新标题", true, function (newTitle) {
             if (!newTitle) return;
+            var _h = { "Content-Type": "application/json" };
+            if (authToken) _h["Authorization"] = "Bearer " + authToken;
             fetch("/api/history/" + convId + "/title", {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: _h,
                 body: JSON.stringify({ title: newTitle }),
             }).then(function (resp) {
                 if (resp.ok) loadHistory();
@@ -752,9 +759,11 @@ var uploadedFiles = [];  // Track uploaded documents
         var toolCalls = [];
 
         try {
+            var headers = { "Content-Type": "application/json" };
+            if (authToken) headers["Authorization"] = "Bearer " + authToken;
             var response = await fetch("/api/chat/stream", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: headers,
                 body: JSON.stringify({ message: text, conversation_id: conversationId, device_id: deviceId }),
             });
             if (!response.ok) {
@@ -1269,9 +1278,11 @@ var uploadedFiles = [];  // Track uploaded documents
         var fullText = "";
         var toolCalls = [];
 
-        fetch("/api/chat/stream", {
+        var _headers = { "Content-Type": "application/json" };
+            if (authToken) _headers["Authorization"] = "Bearer " + authToken;
+            fetch("/api/chat/stream", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: _headers,
             body: JSON.stringify({ message: text, conversation_id: conversationId, device_id: deviceId }),
         }).then(function (response) {
             if (!response.ok) {
