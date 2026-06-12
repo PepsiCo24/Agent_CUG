@@ -241,7 +241,10 @@ async def chat_stream(request: ChatRequest, req: Request):
 @router.post("/rag/query", response_model=RAGQueryResponse)
 async def rag_query(request: RAGQueryRequest):
     rag = RAGPipeline()
-    docs = await rag.query(request.query, top_k=request.top_k)
+    if request.doc_ids:
+        docs = await rag.query_with_doc_ids(request.query, doc_ids=request.doc_ids, top_k=request.top_k)
+    else:
+        docs = await rag.query(request.query, top_k=request.top_k)
     return RAGQueryResponse(
         documents=[{"id":d.id,"content":d.content,"score":round(d.score,4),"source":d.metadata.get("source","unknown")} for d in docs],
         total=len(docs)

@@ -1430,7 +1430,10 @@ function scrollToBottom() {
         try {
             var formData = new FormData();
             formData.append("file", file);
-            var resp = await fetch("/api/rag/upload", { method: "POST", body: formData });
+            var headers = {};
+            if (authToken) headers["Authorization"] = "Bearer " + authToken;
+            if (deviceId) headers["X-Device-Id"] = deviceId;
+            var resp = await fetch("/api/rag/upload", { method: "POST", headers: headers, body: formData });
             var result = await resp.json();
             if (resp.ok) addDocTag(file.name);
             showUploadStatus(resp.ok ? "success" : "error",
@@ -1462,9 +1465,13 @@ function scrollToBottom() {
         if (!query) return;
         ragResults.innerHTML = "<p style=\"color:var(--text-tertiary)\">\u68c0\u7d22\u4e2d...</p>";
         try {
+            var body = { query: query, top_k: 20 };
+            if (selectedDocIds.length > 0) body.doc_ids = selectedDocIds;
+            var headers = { "Content-Type": "application/json" };
+            if (authToken) headers["Authorization"] = "Bearer " + authToken;
             var resp = await fetch("/api/rag/query", {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: query, top_k: 20 }),
+                method: "POST", headers: headers,
+                body: JSON.stringify(body),
             });
             var data = await resp.json();
             if (!data.documents || data.documents.length === 0) {

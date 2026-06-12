@@ -28,7 +28,8 @@ class ChatResponse(BaseModel):
 class RAGQueryRequest(BaseModel):
     """RAG 查询请求"""
     query: str = Field(..., description="查询文本")
-    top_k: int = Field(5, ge=1, le=20)
+    top_k: int = Field(5, ge=1, le=50)
+    doc_ids: list[str] | None = Field(None, description="doc filter")
 
 
 class RAGQueryResponse(BaseModel):

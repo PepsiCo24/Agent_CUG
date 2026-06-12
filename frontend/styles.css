@@ -220,7 +220,7 @@ html, body {
 }
 .welcome-screen h1 { font-size: 26px; font-weight: 600; margin-bottom: 12px; letter-spacing: -.3px; }
 .welcome-subtitle { color: var(--text-tertiary); font-size: 14px; margin-bottom: 36px; }
-.suggestion-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 600px; }
+.suggestion-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: var(--thread-content-max-width); }
 .chip {
     padding: 8px 16px; background: transparent;
     border: 1px solid var(--border-strong); border-radius: var(--radius-xl);
@@ -482,7 +482,7 @@ html, body {
 .input-footer { text-align: center; font-size: 11px; color: var(--text-tertiary); padding: 10px 0 0; }
 
 /* ====== 鐭ヨ瘑搴?鈥?ChatGPT 鍗＄墖椋庢牸 ====== */
-.rag-content { flex: 1; overflow-y: auto; padding: 24px 20px; max-width: 720px; margin: 0 auto; width: 100%; }
+.rag-content { flex: 1; overflow-y: auto; padding: 24px 20px; max-width: var(--thread-content-max-width); margin: 0 auto; width: 100%; }
 .rag-upload-section, .rag-query-section {
     background: var(--surface-secondary); border: 1px solid var(--border-light);
     border-radius: var(--radius-lg); padding: 22px; margin-bottom: 20px;
@@ -526,7 +526,7 @@ html, body {
 .rag-result-item .result-content { font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
 
 /* ====== 璁剧疆 鈥?ChatGPT 鍗＄墖椋庢牸 ====== */
-.settings-content { flex: 1; overflow-y: auto; padding: 24px 20px; max-width: 640px; margin: 0 auto; width: 100%; }
+.settings-content { flex: 1; overflow-y: auto; padding: 24px 20px; max-width: var(--thread-content-max-width); margin: 0 auto; width: 100%; }
 .settings-group {
     background: var(--surface-secondary); border: 1px solid var(--border-light);
     border-radius: var(--radius-lg); padding: 20px 22px; margin-bottom: 20px;
