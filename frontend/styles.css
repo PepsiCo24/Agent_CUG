@@ -169,7 +169,7 @@ html, body {
 .history-title { overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .history-time { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; margin-left: 8px; }
 
-.sidebar-footer { margin-top: auto; padding: 12px; border-top: 1px solid var(--border-light); }
+.sidebar-footer { margin-top: auto; padding: 12px; border-top: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 6px; }
 .user-info { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: var(--radius-md); }
 .avatar {
     width: 32px; height: 32px; border-radius: 50%; background: var(--brand-purple);
@@ -552,7 +552,7 @@ html, body {
     .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 100; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
     .sidebar.collapsed { left: -260px; }
     .message-row { padding: 16px; }
-    
+}
 
 /* Right-click context menu */
 .context-menu {
@@ -742,7 +742,7 @@ html, body {
 
 /* ====== ChatGPT 椋庢牸鐢ㄦ埛鑿滃崟 ====== */
 .user-menu-wrapper {
-    position: relative;
+    position: relative; width: 100%;
 }
 .user-menu-btn {
     display: flex; align-items: center; gap: 10px; width: 100%;
