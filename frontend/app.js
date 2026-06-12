@@ -66,8 +66,8 @@
             localStorage.setItem("agent_cug_user", JSON.stringify(currentUser));
             updateUserUI();
             showAuth(false);
+            await migrateDeviceConversations();
             loadHistory();
-            migrateDeviceConversations();
         } catch (e) { showAuthError(e.message); }
     }
 
@@ -88,8 +88,8 @@
             localStorage.setItem("agent_cug_user", JSON.stringify(currentUser));
             updateUserUI();
             showAuth(false);
+            await migrateDeviceConversations();
             loadHistory();
-            migrateDeviceConversations();
         } catch (e) { showAuthError(e.message); }
     }
 
