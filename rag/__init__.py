@@ -190,6 +190,21 @@ class RAGPipeline:
         """重置单例（用于测试）"""
         cls._instance = None
 
+    async def delete_by_doc_id(self, doc_id: str) -> int:
+        """Delete all chunks belonging to a document."""
+        return await self._retriever.delete_by_doc_id(doc_id)
+
+    async def query_with_doc_ids(
+        self, query: str, doc_ids: list[str] | None = None, top_k: int | None = None
+    ) -> list[Document]:
+        """检索，可选按文档ID过滤"""
+        k = top_k or self._top_k
+        fetch_k = max(k * 4, 20)
+        docs = await self._retriever.retrieve(query, top_k=fetch_k, doc_ids=doc_ids)
+        if self._rerank_enabled and docs:
+            docs = await self._reranker.rerank(query, docs)
+        return docs[:k]
+
     @property
     def document_count(self) -> int:
         return self._retriever.count

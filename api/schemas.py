@@ -13,6 +13,7 @@ class ChatRequest(BaseModel):
     """聊天请求"""
     message: str = Field(..., min_length=1, max_length=32000, description="用户消息")
     conversation_id: str | None = Field(None, description="会话 ID")
+    device_id: str | None = Field(None, description="匿名设备 ID")
 
 
 class ChatResponse(BaseModel):
@@ -60,3 +61,8 @@ class HistoryItem(BaseModel):
 class HistoryResponse(BaseModel):
     """历史记录响应"""
     conversations: list[HistoryItem] = Field(default_factory=list)
+
+
+class MigrateRequest(BaseModel):
+    """匿名会话迁移请求"""
+    device_id: str = Field(..., description="匿名设备 ID")

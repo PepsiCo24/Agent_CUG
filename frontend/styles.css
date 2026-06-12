@@ -89,7 +89,7 @@ html, body {
     background: var(--sidebar-bg); display: flex; flex-direction: column;
     border-right: 1px solid var(--border-light);
     transition: width .2s ease, min-width .2s ease, opacity .2s ease;
-    overflow: hidden;
+    overflow: visible;
 }
 .sidebar.collapsed { width: 0; min-width: 0; opacity: 0; border-right: none; }
 

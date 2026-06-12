@@ -28,7 +28,12 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # Config
 # ============================================================
-JWT_SECRET = secrets.token_urlsafe(32)
+JWT_SECRET_FILE = Path("./data/.jwt_secret")
+if JWT_SECRET_FILE.exists():
+    JWT_SECRET = JWT_SECRET_FILE.read_text(encoding="utf-8").strip()
+else:
+    JWT_SECRET = secrets.token_urlsafe(32)
+    JWT_SECRET_FILE.write_text(JWT_SECRET, encoding="utf-8")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 72
 QR_TOKEN_EXPIRE_SECONDS = 120
