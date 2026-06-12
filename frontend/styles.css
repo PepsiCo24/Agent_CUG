@@ -1142,7 +1142,6 @@ html, body {
     border-radius: var(--radius-lg);
     flex-wrap: wrap;
     max-width: var(--thread-content-max-width);
-    width: calc(100% - 48px);
     box-sizing: border-box;
 }
 .doc-tags-icon { font-size: 14px; }

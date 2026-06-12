@@ -890,13 +890,6 @@ var uploadedFiles = [];  // Track uploaded documents
         sendBtn.disabled = false;
         messageInput.focus();
 
-    // ====== 键盘快捷键 ======
-    messageInput.addEventListener("keydown", function(e) {
-        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
 
         scrollToBottom();
     }
@@ -1375,11 +1368,16 @@ function renderFinal(text, toolCalls) {
         var contentEl2 = assistantRow.querySelector(".message-content");
         var fullText = "";
         var toolCalls = [];
+        var ragDocsSendEdit = [];
 
         var _headers = { "Content-Type": "application/json" };
             if (authToken) _headers["Authorization"] = "Bearer " + authToken;
             var chatBody2 = { message: text, conversation_id: conversationId, device_id: deviceId };
-            if (selectedDocIds.length > 0) chatBody2.doc_ids = selectedDocIds;
+            var sentDocIds2 = selectedDocIds.slice();
+            if (sentDocIds2.length > 0) chatBody2.doc_ids = sentDocIds2;
+            selectedDocIds = [];
+            uploadedFiles = [];
+            renderDocTags();
             fetch("/api/chat/stream", {
             method: "POST",
             headers: _headers,
@@ -1445,7 +1443,7 @@ function renderFinal(text, toolCalls) {
                 if (event === "token") {
                     fullText += data;
                 } else if (event === "rag_docs") {
-                    try { ragDocs = JSON.parse(data); renderRagDocsBar(assistantRow, ragDocs, []); } catch (e) {}
+                    try { ragDocsSendEdit = JSON.parse(data); renderRagDocsBar(assistantRow, ragDocsSendEdit, []); } catch (e) {}
                 } else if (event === "tool_call") {
                     try { toolCalls.push(JSON.parse(data)); } catch (e) {}
                 } else if (event === "done") {
@@ -1618,4 +1616,12 @@ function scrollToBottom() {
     } else {
         init();
     }
+
+    // ====== 键盘快捷键 (Ctrl+Enter 发送) ======
+    messageInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
 })();
