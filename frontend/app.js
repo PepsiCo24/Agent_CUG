@@ -796,16 +796,17 @@ var uploadedFiles = [];  // Track uploaded documents
         var toolCalls = [];
         var ragDocs = [];
 
-        // Clear doc tags after sending (Gemini-style: hide upload window on dialog)
-        uploadedFiles = [];
-        selectedDocIds = [];
-        renderDocTags();
-
         try {
             var headers = { "Content-Type": "application/json" };
             if (authToken) headers["Authorization"] = "Bearer " + authToken;
             var chatBody = { message: text, conversation_id: conversationId, device_id: deviceId };
-            if (selectedDocIds.length > 0) chatBody.doc_ids = selectedDocIds;
+            if (sentDocIds.length > 0) chatBody.doc_ids = sentDocIds;
+
+            // Clear doc tags after building chatBody (Gemini-style: hide upload window on dialog)
+            uploadedFiles = [];
+            selectedDocIds = [];
+            renderDocTags();
+
             var response = await fetch("/api/chat/stream", {
                 method: "POST",
                 headers: headers,
