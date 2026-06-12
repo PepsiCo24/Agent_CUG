@@ -1405,8 +1405,7 @@ function scrollToBottom() {
         var el = document.createElement("div");
         el.className = type; el.textContent = message;
         uploadStatus.appendChild(el);
-        setTimeout(function () {
-    "use strict"; el.remove(); }, 5000);
+        setTimeout(function () { el.remove(); }, 5000);
     }
 
     async function refreshDocCount() {
@@ -1426,7 +1425,7 @@ function scrollToBottom() {
         try {
             var resp = await fetch("/api/rag/query", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: query, top_k: 5 }),
+                body: JSON.stringify({ query: query, top_k: 20 }),
             });
             var data = await resp.json();
             if (!data.documents || data.documents.length === 0) {

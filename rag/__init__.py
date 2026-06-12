@@ -15,28 +15,51 @@ from rag.loaders import load_document
 from rag.retriever import ChromaRetriever
 from rag.reranker import KeywordReranker
 
-# Patterns to identify webpage UI / navigation noise chunks
-_NOISE_CHUNK_PATTERNS = [
-    re.compile(r'^\s*(?:首\s*页|Home)\s*$', re.IGNORECASE),
-    re.compile(r'^\s*请输入关键词搜索\s*$'),
-    re.compile(r'^\s*关闭\s*$'),
-    re.compile(r'^\s*[一-鿿]+政府网\s*$'),
-    re.compile(r'^\s*索\s*引\s*号\s*[:]\s*\d'),
-    re.compile(r'^\s*走进[一-鿿]+\s*$'),
+# Gov webpage noise markers (per-line check)
+_GOV_NOISE_MARKERS = [
+    re.compile(r'\d{4}/\d{1,2}/\d{1,2}\s+\d{2}:\d{2}'),
+    re.compile(r'\d{4}年\d{1,2}月\d{1,2}日\s+星期'),
+    re.compile(r'请输入关键词'),
+    re.compile(r'^\s*首\s*页\s+'),
+    re.compile(r'^\s*首页\s*>'),
+    re.compile(r'走进\S+'),
+    re.compile(r'政府网站标识码'),
+    re.compile(r'主办单位[：:]'),
+    re.compile(r'鄂ICP备'),
+    re.compile(r'鄂公网安备'),
+    re.compile(r'^\s*索\s*引\s*号'),
+    re.compile(r'政府信息公开'),
+    re.compile(r'网上服务'),
+    re.compile(r'互动交流'),
+    re.compile(r'www\.\w+\.\w+'),
+    re.compile(r'^\d+/\d+$'),
 ]
 
 def _is_noise_chunk(content: str) -> bool:
-    """Check if a chunk is webpage UI noise rather than document content."""
-    # Very short chunks that are pure UI
+    """Check if a chunk is webpage UI noise rather than document content.
+
+    Uses line-level noise ratio: if >40% of non-empty lines match known
+    gov noise patterns, the chunk is treated as noise.
+    """
     stripped = content.strip()
     if len(stripped) < 20:
         return True
-    # Match known noise patterns
-    for pat in _NOISE_CHUNK_PATTERNS:
-        if pat.search(stripped):
-            return True
-    # Chunks that are mostly URLs and navigation
+    lines = [l for l in stripped.split('\n') if l.strip()]
+    if not lines:
+        return True
+    noise_lines = sum(
+        1 for l in lines
+        if any(m.search(l) for m in _GOV_NOISE_MARKERS)
+    )
+    noise_ratio = noise_lines / len(lines)
+    # If >40% of lines are noise, filter it out
+    if noise_ratio > 0.4:
+        return True
+    # Also check for breadcrumb-heavy chunks
     if ' > ' in stripped and len(stripped) < 100:
+        return True
+    # Pure navigation / breadcrumb
+    if re.match(r'^[^\n]*首页\s*>', stripped) and len(stripped) < 80:
         return True
     return False
 
@@ -72,14 +95,21 @@ class RAGPipeline:
     async def ingest_file(
         self, file_path: str | Path, metadata: dict[str, Any] | None = None
     ) -> int:
-        """摄入单个文件"""
+        """摄入单个文件
+
+        Merges all pages into a single text before chunking so that the
+        article-aware splitter can detect article boundaries that fall
+        across page breaks (common in PDF government documents).
+        """
         pages = load_document(file_path)
         if not pages:
             return 0
 
         path = Path(file_path)
+        # Merge pages so article boundaries can be found across pages
+        merged_text = "\n".join(pages)
         chunks = self._chunker.split_documents(
-            pages,
+            [merged_text],
             metadata={
                 "source": path.name,
                 "file_path": str(path.absolute()),

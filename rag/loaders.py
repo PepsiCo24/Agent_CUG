@@ -9,20 +9,58 @@ from pathlib import Path
 from typing import Protocol
 
 
-# Common webpage noise patterns in PDF printouts
-_NOISE_PATTERNS = [
-    re.compile(r'\d{4}/\d{1,2}/\d{1,2}\s+\d{2}:\d{2}\s+'),  # datetime stamps
-    re.compile(r'www\.[a-z]+\.[a-z]+(?:\.cn)?/[^\s]*'),  # URLs
-    re.compile(r'https?://[^\s]+'),  # http URLs
-    re.compile(r'\d{4}\u5e74\d{1,2}\u6708\d{1,2}\u65e5\s*\u661f\u671f[\u4e00-\u9fff]'),  # Chinese date
-    re.compile(r'^\s*(?:\u9996\s*\u9875|\u8d70\u8fdb|\u8bf7\u8f93\u5165|\u5173\u952e\u8bcd|\u641c\u7d22)\s*$', re.MULTILINE),
+# Gov webpage header/footer noise patterns (line-level)
+_GOV_NOISE_LINE_PATTERNS = [
+    # Per-page datestamp header: "2026/6/12 00:44 doc title"
+    re.compile(r'^\d{4}/\d{1,2}/\d{1,2}\s+\d{2}:\d{2}\s+'),
+    # Chinese date with weekday: "2026年6月12日 星期五 ..."
+    re.compile(r'^\d{4}年\d{1,2}月\d{1,2}日\s+星期'),
+    # Nav bar elements
+    re.compile(r'请输入关键词'),
+    re.compile(r'^\s*首\s*页\s+'),
+    re.compile(r'^\s*首页\s*>'),
+    re.compile(r'走进\S+'),
+    re.compile(r'政务动态'),
+    re.compile(r'政府信息公开'),
+    re.compile(r'网上服务'),
+    re.compile(r'互动交流'),
+    # Metadata fields
+    re.compile(r'^\s*索\s*引\s*号\s*[:：]'),
+    re.compile(r'^\s*信息分类\s*[:：]'),
+    re.compile(r'^\s*内容分类\s*[:：]'),
+    re.compile(r'^\s*发文日期\s*[:：]'),
+    re.compile(r'^\s*发布机构\s*[:：]'),
+    re.compile(r'^\s*生成日期\s*[:：]'),
+    re.compile(r'^\s*生效日期\s*[:：]'),
+    re.compile(r'^\s*废止时间\s*[:：]'),
+    re.compile(r'^\s*文\s*号\s*[:：]'),
+    re.compile(r'^\s*关\s*键\s*词\s*[:：]'),
+    re.compile(r'^\s*内容概述\s*[:：]'),
+    # Footer elements
+    re.compile(r'政府网站标识码'),
+    re.compile(r'主办单位[：:]'),
+    re.compile(r'承办[：:]'),
+    re.compile(r'鄂ICP备'),
+    re.compile(r'鄂公网安备'),
+    re.compile(r'www\.\w+\.\w+'),
+    # Page numbers
+    re.compile(r'^\d+/\d+$'),
 ]
 
 
 def _clean_content(text: str) -> str:
-    """Remove common webpage noise from extracted text."""
-    for pat in _NOISE_PATTERNS:
-        text = pat.sub(' ', text)
+    """Remove webpage header/footer noise from PDF-printed gov pages.
+
+    Operates line-by-line: any line matching a gov-noise pattern is dropped.
+    Remaining lines are reassembled and whitespace is collapsed.
+    """
+    lines = text.split('\n')
+    kept: list[str] = []
+    for line in lines:
+        if any(pat.search(line) for pat in _GOV_NOISE_LINE_PATTERNS):
+            continue
+        kept.append(line)
+    text = '\n'.join(kept)
     # Collapse multiple spaces/newlines
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = re.sub(r' {2,}', ' ', text)
