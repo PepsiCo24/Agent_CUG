@@ -67,6 +67,7 @@
             updateUserUI();
             showAuth(false);
             await migrateDeviceConversations();
+            _loadingHistory = false;
             loadHistory();
         } catch (e) { showAuthError(e.message); }
     }
@@ -89,6 +90,7 @@
             updateUserUI();
             showAuth(false);
             await migrateDeviceConversations();
+            _loadingHistory = false;
             loadHistory();
         } catch (e) { showAuthError(e.message); }
     }
@@ -101,6 +103,7 @@
         // Keep deviceId for anonymous history
         conversationId = null;
         updateUserUI();
+        _loadingHistory = false;
         loadHistory();
         // Clear chat
         var el = document.getElementById("chatMessages");
