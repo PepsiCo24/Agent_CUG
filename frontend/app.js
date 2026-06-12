@@ -1,5 +1,5 @@
-﻿// ============================================================
-// Agent_CUG 鈥?ChatGPT 椋庢牸鍓嶇 JS
+// ============================================================
+// Agent_CUG — ChatGPT 风格前端 JS
 // ============================================================
 
 (function () {
@@ -37,7 +37,7 @@
         if (body) opts.body = JSON.stringify(body);
         var resp = await fetch(url, opts);
         var data = await resp.json().catch(function() { return {}; });
-        if (!resp.ok) throw new Error(data.detail || "璇锋眰澶辫触 " + resp.status);
+        if (!resp.ok) throw new Error(data.detail || "请求失败 " + resp.status);
         return data;
     }
 
@@ -57,7 +57,7 @@
     async function doLogin() {
         var username = document.getElementById("loginUsername").value.trim();
         var password = document.getElementById("loginPassword").value;
-        if (!username || !password) { showAuthError("璇峰～鍐欑敤鎴峰悕鍜屽瘑鐮?); return; }
+        if (!username || !password) { showAuthError("请填写用户名和密码"); return; }
         try {
             var data = await apiCall("/api/auth/login", "POST", { username: username, password: password });
             authToken = data.token;
@@ -77,10 +77,10 @@
         var email = document.getElementById("regEmail").value.trim();
         var password = document.getElementById("regPassword").value;
         var password2 = document.getElementById("regPassword2").value;
-        if (!username || !password) { showAuthError("璇峰～鍐欑敤鎴峰悕鍜屽瘑鐮?); return; }
-        if (username.length < 3) { showAuthError("鐢ㄦ埛鍚嶈嚦灏?涓瓧绗?); return; }
-        if (password.length < 6) { showAuthError("瀵嗙爜鑷冲皯6涓瓧绗?); return; }
-        if (password !== password2) { showAuthError("涓ゆ瀵嗙爜涓嶄竴鑷?); return; }
+        if (!username || !password) { showAuthError("请填写用户名和密码"); return; }
+        if (username.length < 3) { showAuthError("用户名至少3个字符"); return; }
+        if (password.length < 6) { showAuthError("密码至少6个字符"); return; }
+        if (password !== password2) { showAuthError("两次密码不一致"); return; }
         try {
             var data = await apiCall("/api/auth/register", "POST", { username: username, password: password, email: email });
             authToken = data.token;
@@ -132,12 +132,12 @@
             if (loggedOut) loggedOut.style.display = "none";
             if (loggedIn) loggedIn.style.display = "block";
         } else {
-            if (display) display.textContent = "鐧诲綍";
-            if (sidebarName) sidebarName.textContent = "鏈櫥褰?;
-            if (panelName) panelName.textContent = "鏈櫥褰?;
+            if (display) display.textContent = "登录";
+            if (sidebarName) sidebarName.textContent = "未登录";
+            if (panelName) panelName.textContent = "未登录";
             if (panelEmail) panelEmail.textContent = "";
-            if (avatar) avatar.textContent = "馃";
-            if (panelAvatar) panelAvatar.textContent = "馃";
+            if (avatar) avatar.textContent = "🤖";
+            if (panelAvatar) panelAvatar.textContent = "🤖";
             if (loggedOut) loggedOut.style.display = "block";
             if (loggedIn) loggedIn.style.display = "none";
         }
@@ -155,7 +155,7 @@
 
     // ====== Auth Event Handlers ======
     function setupAuthEvents() {
-        // ChatGPT 椋庢牸鐢ㄦ埛鑿滃崟鎸夐挳 鈥?鐐瑰嚮鍒囨崲闈㈡澘
+        // ChatGPT 风格用户菜单按钮 — 点击切换面板
         var userMenuBtn = document.getElementById("userMenuBtn");
         var userPanel = document.getElementById("userPanel");
         if (userMenuBtn && userPanel) {
@@ -165,7 +165,7 @@
                 userPanel.style.display = isOpen ? "none" : "block";
                 userMenuBtn.classList.toggle("open", !isOpen);
             });
-            // 鐐瑰嚮闈㈡澘澶栭儴鍏抽棴
+            // 点击面板外部关闭
             document.addEventListener("click", function(e) {
                 if (!userMenuBtn.contains(e.target) && !userPanel.contains(e.target)) {
                     userPanel.style.display = "none";
@@ -174,11 +174,12 @@
             });
         }
 
-        // 闈㈡澘鍐呮寜閽?        var panelLoginBtn = document.getElementById("panelLoginBtn");
+        // 面板内按钮
+        var panelLoginBtn = document.getElementById("panelLoginBtn");
         if (panelLoginBtn) panelLoginBtn.addEventListener("click", function() {
             userPanel.style.display = "none";
             userMenuBtn.classList.remove("open");
-            // 鍒囨崲鍒扮櫥褰?tab
+            // 切换到登录 tab
             var tabs = document.querySelectorAll(".auth-tab");
             tabs.forEach(function(x) { x.classList.remove("active"); });
             tabs[0].classList.add("active");
@@ -192,7 +193,7 @@
         if (panelRegBtn) panelRegBtn.addEventListener("click", function() {
             userPanel.style.display = "none";
             userMenuBtn.classList.remove("open");
-            // 鍒囨崲鍒版敞鍐?tab
+            // 切换到注册 tab
             var tabs = document.querySelectorAll(".auth-tab");
             tabs.forEach(function(x) { x.classList.remove("active"); });
             tabs[1].classList.add("active");
@@ -213,7 +214,8 @@
         if (panelSettingBtn) panelSettingBtn.addEventListener("click", function() {
             userPanel.style.display = "none";
             userMenuBtn.classList.remove("open");
-            // 鍒囨崲鍒拌缃潰鏉?            var navItems = document.querySelectorAll(".sidebar-nav-item");
+            // 切换到设置面板
+            var navItems = document.querySelectorAll(".sidebar-nav-item");
             navItems.forEach(function(x) { x.classList.remove("active"); });
             var settingsNav = document.querySelector('[data-panel="settings"]');
             if (settingsNav) settingsNav.classList.add("active");
@@ -223,17 +225,17 @@
         // Panel social buttons
         var panelQQ = document.querySelector(".panel-social .social-btn.qq");
         if (panelQQ) panelQQ.addEventListener("click", function() {
-            showAuthError("QQ鐧诲綍鍔熻兘寮€鍙戜腑锛岃浣跨敤璐﹀彿瀵嗙爜鐧诲綍");
+            showAuthError("QQ登录功能开发中，请使用账号密码登录");
         });
         var panelWX = document.querySelector(".panel-social .social-btn.wx");
         if (panelWX) panelWX.addEventListener("click", function() {
-            showAuthError("寰俊鐧诲綍鍔熻兘寮€鍙戜腑锛岃浣跨敤璐﹀彿瀵嗙爜鐧诲綍");
+            showAuthError("微信登录功能开发中，请使用账号密码登录");
         });
         var panelQRBtn = document.getElementById("panelQRBtn");
         if (panelQRBtn) panelQRBtn.addEventListener("click", function() {
             userPanel.style.display = "none";
             userMenuBtn.classList.remove("open");
-            showAuthError("鎵爜鐧诲綍鍔熻兘寮€鍙戜腑锛岃浣跨敤璐﹀彿瀵嗙爜鐧诲綍");
+            showAuthError("扫码登录功能开发中，请使用账号密码登录");
             showAuth(true);
         });
 
@@ -241,11 +243,11 @@
                 // Auth modal social buttons
         var authQQ = document.querySelector(".auth-social-btn.qq");
         if (authQQ) authQQ.addEventListener("click", function() {
-            showAuthError("QQ鐧诲綍鍔熻兘寮€鍙戜腑锛岃浣跨敤璐﹀彿瀵嗙爜鐧诲綍");
+            showAuthError("QQ登录功能开发中，请使用账号密码登录");
         });
         var authWX = document.querySelector(".auth-social-btn.wx");
         if (authWX) authWX.addEventListener("click", function() {
-            showAuthError("寰俊鐧诲綍鍔熻兘寮€鍙戜腑锛岃浣跨敤璐﹀彿瀵嗙爜鐧诲綍");
+            showAuthError("微信登录功能开发中，请使用账号密码登录");
         });
 
 // Auth overlay events
@@ -324,7 +326,7 @@
     var docTagsArea = document.getElementById("docTagsArea");
     var docTagsList = document.getElementById("docTagsList");
 
-    // ====== 鐘舵€?======
+    // ====== 状态 ======
     var conversationId = null;
     var isStreaming = false;
     var messages = [];
@@ -386,14 +388,14 @@ var uploadedFiles = [];  // Track uploaded documents
     }
 
     
-    // ====== 鏆楄壊妯″紡妫€娴?======
+    // ====== 暗色模式检测 ======
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
     if (prefersDark.matches) document.body.classList.add("dark-mode");
     prefersDark.addEventListener("change", function(e) {
         document.body.classList.toggle("dark-mode", e.matches);
     });
 
-    // ====== 鍒濆鍖?======
+    // ====== 初始化 ======
     // Theme toggle
     var themeToggleBtn = null;
     function getTheme() {
@@ -452,7 +454,7 @@ var uploadedFiles = [];  // Track uploaded documents
     function renderHistory() {
         if (!historyList) return;
         if (conversations.length === 0) {
-            historyList.innerHTML = "<div class=\"history-empty\">鏆傛棤浼氳瘽璁板綍</div>";
+            historyList.innerHTML = "<div class=\"history-empty\">暂无会话记录</div>";
             return;
         }
         var html = "";
@@ -465,11 +467,11 @@ var uploadedFiles = [];  // Track uploaded documents
                 "<span class=\"history-time\">" + formatTime(conv.created_at) + "</span>" +
                 "</div>" +
                 "<div class=\"history-actions\">" +
-                "<button class=\"history-action-btn\" data-action=\"rename\" title=\"閲嶅懡鍚峔">" +
+                "<button class=\"history-action-btn\" data-action=\"rename\" title=\"重命名\">" +
                 "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\">" +
                 "<path d=\"M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\"></path>" +
                 "<path d=\"M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z\"></path></svg></button>" +
-                "<button class=\"history-action-btn\" data-action=\"delete\" title=\"鍒犻櫎\">" +
+                "<button class=\"history-action-btn\" data-action=\"delete\" title=\"删除\">" +
                 "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\">" +
                 "<polyline points=\"3 6 5 6 21 6\"></polyline>" +
                 "<path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"></path></svg></button>" +
@@ -508,7 +510,7 @@ var uploadedFiles = [];  // Track uploaded documents
         } catch (e) { return ""; }
     }
 
-    // ====== 浜嬩欢 ======
+    // ====== 事件 ======
     function setupEventListeners() {
         toggleSidebarBtn.addEventListener("click", function () {
             sidebar.classList.toggle("collapsed");
@@ -564,7 +566,8 @@ var uploadedFiles = [];  // Track uploaded documents
         ragQueryInput.addEventListener("keydown", function (e) { if (e.key === "Enter") doRagQuery(); });
         messageInput.addEventListener("input", autoResizeInput);
 
-        // 浠ｇ悊锛氭€濊€冮潰鏉挎姌鍙?        document.addEventListener("click", function (e) {
+        // 代理：思考面板折叠
+        document.addEventListener("click", function (e) {
             var header = e.target.closest(".thinking-header");
             if (header) {
                 var section = header.parentElement;
@@ -572,7 +575,8 @@ var uploadedFiles = [];  // Track uploaded documents
             }
         });
 
-        // 浠ｇ悊锛氫唬鐮佸鍒舵寜閽?        document.addEventListener("click", function (e) {
+        // 代理：代码复制按钮
+        document.addEventListener("click", function (e) {
             var btn = e.target.closest(".copy-btn");
             if (btn) {
                 var code = btn.dataset.code || "";
@@ -587,7 +591,7 @@ var uploadedFiles = [];  // Track uploaded documents
         });
     }
 
-        // ==== 鍙抽敭鑿滃崟 ====
+        // ==== 右键菜单 ====
         document.addEventListener("contextmenu", function (e) {
             var item = e.target.closest(".history-item");
             if (!item) return;
@@ -600,7 +604,7 @@ var uploadedFiles = [];  // Track uploaded documents
             menu.className = "context-menu";
             menu.style.left = e.pageX + "px";
             menu.style.top = e.pageY + "px";
-            menu.innerHTML = '<div class="context-menu-item" data-action="rename">\u270f\ufe0f 閲嶅懡鍚?/div>' +'<div class="context-menu-item danger" data-action="delete">\ud83d\uddd1\ufe0f 鍒犻櫎</div>';
+            menu.innerHTML = '<div class="context-menu-item" data-action="rename">\u270f\ufe0f 重命名</div>' +'<div class="context-menu-item danger" data-action="delete">\ud83d\uddd1\ufe0f 删除</div>';
             menu.querySelector("[data-action=rename]").addEventListener("click", function () {
                 menu.remove(); renameConversation(cid);
             });
@@ -628,7 +632,7 @@ var uploadedFiles = [];  // Track uploaded documents
         messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + "px";
     }
 
-    // ====== 鏂板璇?======
+    // ====== 新对话 ======
     function startNewChat() {
         // ???????
         switchPanel("chat");
@@ -680,15 +684,15 @@ var uploadedFiles = [];  // Track uploaded documents
     }
 
     // ====== ???? ======
-    // ====== 鍒犻櫎瀵硅瘽 ======
-    // ====== 鑷畾涔夊脊绐?======
+    // ====== 删除对话 ======
+    // ====== 自定义弹窗 ======
     function showModal(title, message, showInput, callback) {
         var modal = document.createElement("div");
         modal.className = "custom-modal-overlay";
         var inputHtml = showInput ? '<input type="text" class="custom-modal-input" id="modalInput" placeholder="' + escHtml(message) + '">' : '<p class="custom-modal-message">' + escHtml(message) + '</p>';
         var btnHtml = showInput
-            ? '<button class="custom-modal-btn primary" id="modalOk">纭畾</button><button class="custom-modal-btn" id="modalCancel">鍙栨秷</button>'
-            : '<button class="custom-modal-btn danger" id="modalOk">鍒犻櫎</button><button class="custom-modal-btn" id="modalCancel">鍙栨秷</button>';
+            ? '<button class="custom-modal-btn primary" id="modalOk">确定</button><button class="custom-modal-btn" id="modalCancel">取消</button>'
+            : '<button class="custom-modal-btn danger" id="modalOk">删除</button><button class="custom-modal-btn" id="modalCancel">取消</button>';
         modal.innerHTML = '<div class="custom-modal"><div class="custom-modal-header">' + escHtml(title) + '</div><div class="custom-modal-body">' + inputHtml + '</div><div class="custom-modal-footer">' + btnHtml + '</div></div>';
         document.body.appendChild(modal);
         var input = document.getElementById("modalInput");
@@ -711,7 +715,7 @@ var uploadedFiles = [];  // Track uploaded documents
 
     function deleteConversation(convId) {
         if (!convId) return;
-        showModal("鍒犻櫎瀵硅瘽", "纭畾瑕佸垹闄よ繖涓璇濆悧锛熸鎿嶄綔涓嶅彲鎾ら攢銆?, false, function (confirmed) {
+        showModal("删除对话", "确定要删除这个对话吗？此操作不可撤销。", false, function (confirmed) {
             if (!confirmed) return;
             _pendingDeletes[convId] = true;
             // Optimistic: remove from DOM immediately
@@ -734,17 +738,17 @@ var uploadedFiles = [];  // Track uploaded documents
                 delete _pendingDeletes[convId];
                 if (!resp.ok) loadHistory();
             }).catch(function (e) {
-                console.warn("鍒犻櫎澶辫触:", e);
+                console.warn("删除失败:", e);
                 delete _pendingDeletes[convId];
                 loadHistory();
             });
         });
     }
 
-    // ====== 閲嶅懡鍚嶅璇?======
+    // ====== 重命名对话 ======
     function renameConversation(convId) {
         if (!convId) return;
-        showModal("閲嶅懡鍚嶅璇?, "璇疯緭鍏ユ柊鏍囬", true, function (newTitle) {
+        showModal("重命名对话", "请输入新标题", true, function (newTitle) {
             if (!newTitle) return;
             var _h = { "Content-Type": "application/json" };
             if (authToken) _h["Authorization"] = "Bearer " + authToken;
@@ -754,7 +758,7 @@ var uploadedFiles = [];  // Track uploaded documents
                 body: JSON.stringify({ title: newTitle }),
             }).then(function (resp) {
                 if (resp.ok) loadHistory();
-            }).catch(function (e) { console.warn("閲嶅懡鍚嶅け璐?", e); });
+            }).catch(function (e) { console.warn("重命名失败:", e); });
         });
     }
 
@@ -874,7 +878,7 @@ var uploadedFiles = [];  // Track uploaded documents
         sendBtn.disabled = false;
         messageInput.focus();
 
-    // ====== 閿洏蹇嵎閿?======
+    // ====== 键盘快捷键 ======
     messageInput.addEventListener("keydown", function(e) {
         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
@@ -903,7 +907,7 @@ var uploadedFiles = [];  // Track uploaded documents
             userActionsDiv.className = "message-actions";
             var editBtn = document.createElement("button");
             editBtn.className = "message-edit-btn";
-            editBtn.title = "缂栬緫娑堟伅";
+            editBtn.title = "编辑消息";
             editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
             editBtn.addEventListener("click", function () {
                 editUserMessage(row);
@@ -917,17 +921,17 @@ var uploadedFiles = [];  // Track uploaded documents
             actionsDiv.className = "message-actions";
             var copyBtn = document.createElement("button");
             copyBtn.className = "message-copy-btn";
-            copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>澶嶅埗</span>';
+            copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>复制</span>';
             copyBtn.addEventListener("click", function () {
                 var txt = contentDiv.textContent || "";
                 copyToClipboard(txt).then(function () {
     "use strict";
                     copyBtn.classList.add("copied");
-                    copyBtn.querySelector("span").textContent = "鉁?宸插鍒?;
+                    copyBtn.querySelector("span").textContent = "✓ 已复制";
                     setTimeout(function () {
     "use strict";
                         copyBtn.classList.remove("copied");
-                        copyBtn.querySelector("span").textContent = "澶嶅埗";
+                        copyBtn.querySelector("span").textContent = "复制";
                     }, 2000);
                 });
             });
@@ -941,7 +945,7 @@ var uploadedFiles = [];  // Track uploaded documents
         return row;
     }
 
-    // ====== 娓叉煋 ======
+    // ====== 渲染 ======
     function renderStreamingContent(el, text, toolCalls) {
         var html = "";
         if (toolCalls && toolCalls.length > 0) {
@@ -956,7 +960,7 @@ var uploadedFiles = [];  // Track uploaded documents
         el.classList.add("streaming-cursor");
     }
 
-    // ====== 文档检索召回条（Gemini风格：显示在助手消息上方）======
+    // ====== ????????Gemini?????????????======
 function renderRagDocsBar(row, ragDocs, sentDocNames) {
     if (!row || !ragDocs || ragDocs.length === 0) return;
     // Check if already rendered
@@ -966,11 +970,11 @@ function renderRagDocsBar(row, ragDocs, sentDocNames) {
     var bar = document.createElement("div");
     bar.className = "rag-docs-bar";
 
-    // Header: "已检索 X 篇文档"
+    // Header: "??? X ???"
     var header = document.createElement("div");
     header.className = "rag-docs-bar-header";
     header.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>' +
-        '<span>已检索 ' + ragDocs.length + ' 篇相关文档</span>';
+        '<span>??? ' + ragDocs.length + ' ?????</span>';
     bar.appendChild(header);
 
     // Doc list
@@ -979,7 +983,7 @@ function renderRagDocsBar(row, ragDocs, sentDocNames) {
     for (var i = 0; i < ragDocs.length; i++) {
         var d = ragDocs[i];
         var scorePct = d.score ? (d.score * 100).toFixed(0) : "?";
-        var sourceName = d.source || "未知文档";
+        var sourceName = d.source || "????";
         // Truncate long source names
         if (sourceName.length > 40) sourceName = sourceName.substring(0, 37) + "...";
         var snippet = d.content_snippet ? escHtml(d.content_snippet) : "";
@@ -987,7 +991,7 @@ function renderRagDocsBar(row, ragDocs, sentDocNames) {
 
         var item = document.createElement("div");
         item.className = "rag-docs-bar-item";
-        item.title = "来源: " + escHtml(d.source || "") + "\n相似度: " + scorePct + "%\n摘要: " + escHtml(d.content_snippet || "");
+        item.title = "??: " + escHtml(d.source || "") + "\n???: " + scorePct + "%\n??: " + escHtml(d.content_snippet || "");
         item.innerHTML = '<span class="rag-docs-bar-icon">' + getDocIcon(sourceName) + '</span>' +
             '<span class="rag-docs-bar-name">' + escHtml(sourceName) + '</span>' +
             '<span class="rag-docs-bar-score">' + scorePct + '%</span>';
@@ -1062,7 +1066,7 @@ function renderFinal(text, toolCalls) {
         return html || renderMarkdown(text);
     }
 
-    // ====== Markdown 娓叉煋 ======
+    // ====== Markdown 渲染 ======
         // ====== Markdown ?? ======
     function renderMarkdown(text) {
         if (!text) return "";
@@ -1455,7 +1459,7 @@ function scrollToBottom() {
         });
     }
 
-    // ====== 鍓创鏉?======
+    // ====== 剪贴板 ======
     async function copyToClipboard(text) {
         try {
             await navigator.clipboard.writeText(text);
@@ -1467,7 +1471,7 @@ function scrollToBottom() {
         }
     }
 
-    // ====== 鏂囦欢涓婁紶 ======
+    // ====== 文件上传 ======
     async function handleFileUpload(e) {
         var files = e.target.files;
         if (!files.length) return;
@@ -1517,7 +1521,7 @@ function scrollToBottom() {
         } catch (e) {}
     }
 
-    // ====== RAG 妫€绱?======
+    // ====== RAG 检索 ======
     async function doRagQuery() {
         var query = ragQueryInput.value.trim();
         if (!query) return;
@@ -1548,7 +1552,7 @@ function scrollToBottom() {
         } catch (e) { ragResults.innerHTML = "<p style=\"color:#ef4444\">\u68c0\u7d22\u5931\u8d25: " + e.message + "</p>"; }
     }
 
-    // ====== 宸ュ叿鍑芥暟 ======
+    // ====== 工具函数 ======
 
     function stripMarkdown(text) {
         if (!text) return "";
@@ -1591,194 +1595,10 @@ function scrollToBottom() {
         return String(text).replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    // ====== 鍚姩 ======
+    // ====== 启动 ======
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
-
-锘?/ ====== 鏂囨。鍒楄〃绠＄悊 ======
-var _loadingDocs = false;
-async function loadDocList() {
-    if (_loadingDocs) return;
-    _loadingDocs = true;
-    try {
-        var resp = await fetchWithAuth("/api/rag/documents");
-        var data = await resp.json();
-        loadedDocs = data.documents || [];
-        renderDocList();
-        renderDocSelector();
-    } catch (e) { console.warn("鍔犺浇鏂囨。鍒楄〃澶辫触:", e); }
-    _loadingDocs = false;
-}
-
-function renderDocList() {
-    if (!docList) return;
-    if (loadedDocs.length === 0) {
-        docList.innerHTML = '<div class="doc-list-empty">鏆傛棤鏂囨。锛屼笂浼犳枃浠跺嵆鍙紑濮?/div>';
-        return;
-    }
-    var html = "";
-    for (var i = 0; i < loadedDocs.length; i++) {
-        var d = loadedDocs[i];
-        var icon = getDocIcon(d.filename);
-        var type = (d.file_type || "").toUpperCase();
-        html += '<div class="doc-list-item" data-id="' + d.id + '">' +
-            '<div class="doc-list-icon">' + icon + '</div>' +
-            '<div class="doc-list-info">' +
-                '<div class="doc-list-name" title="' + escHtml(d.filename) + '">' + escHtml(d.filename) + '</div>' +
-                '<div class="doc-list-meta">' +
-                    '<span>' + type + '</span>' +
-                    '<span>' + (d.chunks || 0) + ' 涓垎鍧?/span>' +
-                    '<span>' + formatTime(d.created_at) + '</span>' +
-                '</div>' +
-            '</div>' +
-            '<div class="doc-list-actions">' +
-                '<button class="doc-list-action-btn danger" data-action="delete" title="鍒犻櫎">' +
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                        '<polyline points="3 6 5 6 21 6"></polyline>' +
-                        '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>' +
-                    '</svg></button>' +
-            '</div></div>';
-    }
-    docList.innerHTML = html;
-
-    var items = docList.querySelectorAll(".doc-list-action-btn");
-    for (var j = 0; j < items.length; j++) {
-        items[j].addEventListener("click", function(e) {
-            e.stopPropagation();
-            var item = this.closest(".doc-list-item");
-            var docId = item.dataset.id;
-            var action = this.dataset.action;
-            if (action === "delete") deleteDocument(docId, item);
-        });
-    }
-}
-
-function getDocIcon(filename) {
-    var ext = (filename || "").split(".").pop().toLowerCase();
-    if (ext === "pdf") return "\u{1F4D5}";
-    if (ext === "docx") return "\u{1F4D8}";
-    if (ext === "md" || ext === "markdown") return "\u{1F4DD}";
-    if (ext === "txt") return "\u{1F4C4}";
-    return "\u{1F4CE}";
-}
-
-async function deleteDocument(docId, itemEl) {
-    if (!confirm("纭畾瑕佸垹闄よ繖涓枃妗ｅ悧锛熸鎿嶄綔涓嶅彲鎾ら攢銆?)) return;
-    try {
-        var resp = await fetchWithAuth("/api/rag/documents/" + docId, { method: "DELETE" });
-        if (!resp.ok) throw new Error("鍒犻櫎澶辫触");
-        if (itemEl) itemEl.remove();
-        selectedDocIds = selectedDocIds.filter(function(id) { return id !== docId; });
-        loadedDocs = loadedDocs.filter(function(d) { return d.id !== docId; });
-        renderDocTags();
-        renderDocSelector();
-        refreshDocCount();
-        if (loadedDocs.length === 0) renderDocList();
-    } catch (e) { alert("鍒犻櫎澶辫触: " + e.message); }
-}
-
-
-
-// ====== 鏂囨。閫夋嫨鍣?======
-function toggleDocSelector() {
-    if (!docSelectorDropdown) return;
-    if (docSelectorDropdown.style.display === "none") {
-        loadDocList().then(function() {
-            docSelectorDropdown.style.display = "block";
-            renderDocSelector();
-        });
-    } else {
-        docSelectorDropdown.style.display = "none";
-    }
-}
-
-function renderDocSelector() {
-    if (!docSelectorList || !docSelectorCount) return;
-    if (loadedDocs.length === 0) {
-        docSelectorList.innerHTML = '<div class="doc-selector-empty">鏆傛棤鏂囨。锛岃鍏堝湪鐭ヨ瘑搴撲腑涓婁紶</div>';
-        docSelectorCount.textContent = "宸查€?0 涓?;
-        return;
-    }
-    docSelectorCount.textContent = "宸查€?" + selectedDocIds.length + " 涓?;
-    var html = "";
-    for (var i = 0; i < loadedDocs.length; i++) {
-        var d = loadedDocs[i];
-        var checked = selectedDocIds.indexOf(d.id) >= 0;
-        var cls = checked ? " doc-selector-item-checked" : "";
-        html += '<div class="doc-selector-item' + cls + '" data-id="' + d.id + '">' +
-            '<input type="checkbox" ' + (checked ? "checked" : "") + ' tabindex="-1">' +
-            '<span class="doc-selector-item-name">' + escHtml(d.filename) + '</span>' +
-            '<span class="doc-selector-item-chunks">' + (d.chunks || 0) + '鍧?/span>' +
-            '</div>';
-    }
-    html += '<div class="doc-selector-actions">' +
-        '<button class="select-all-docs">鍏ㄩ€?/button>' +
-        '<button class="deselect-all-docs">娓呯┖</button>' +
-        '<button class="primary apply-doc-select">纭畾</button>' +
-        '</div>';
-    docSelectorList.innerHTML = html;
-
-    var items = docSelectorList.querySelectorAll(".doc-selector-item");
-    for (var j = 0; j < items.length; j++) {
-        items[j].addEventListener("click", function(e) {
-            var cb = this.querySelector('input[type="checkbox"]');
-            cb.checked = !cb.checked;
-            if (cb.checked) this.classList.add("doc-selector-item-checked");
-            else this.classList.remove("doc-selector-item-checked");
-            updateDocSelection();
-        });
-    }
-
-    var selectAll = docSelectorList.querySelector(".select-all-docs");
-    var deselectAll = docSelectorList.querySelector(".deselect-all-docs");
-    var applyBtn = docSelectorList.querySelector(".apply-doc-select");
-    if (selectAll) selectAll.addEventListener("click", function(e) {
-        e.stopPropagation();
-        selectedDocIds = loadedDocs.map(function(d) { return d.id; });
-        renderDocSelector(); renderDocTags();
-    });
-    if (deselectAll) deselectAll.addEventListener("click", function(e) {
-        e.stopPropagation();
-        selectedDocIds = [];
-        renderDocSelector(); renderDocTags();
-    });
-    if (applyBtn) applyBtn.addEventListener("click", function(e) {
-        e.stopPropagation();
-        updateDocSelection();
-        docSelectorDropdown.style.display = "none";
-        renderDocTags();
-    });
-}
-
-function updateDocSelection() {
-    if (!docSelectorList) return;
-    var cbs = docSelectorList.querySelectorAll('input[type="checkbox"]');
-    selectedDocIds = [];
-    for (var i = 0; i < cbs.length; i++) {
-        if (cbs[i].checked) {
-            var item = cbs[i].closest(".doc-selector-item");
-            if (item) selectedDocIds.push(item.dataset.id);
-        }
-    }
-    if (docSelectorCount) docSelectorCount.textContent = "宸查€?" + selectedDocIds.length + " 涓?;
-    updateDocSelectBtn();
-}
-
-function updateDocSelectBtn() {
-    if (docSelectBtn) {
-        if (selectedDocIds.length > 0) {
-            docSelectBtn.classList.add("has-selection");
-            docSelectBtn.title = "宸查€?" + selectedDocIds.length + " 涓枃妗?;
-        } else {
-            docSelectBtn.classList.remove("has-selection");
-            docSelectBtn.title = "閫夋嫨鐭ヨ瘑搴撴枃妗?;
-        }
-    }
-}
-
 })();
-
-
