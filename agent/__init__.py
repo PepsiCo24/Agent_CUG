@@ -131,13 +131,18 @@ class AgentWorkflow:
         # 简单规则路由
         input_lower = user_input.lower().strip()
 
-        # RAG 关键词
+        # If documents exist in knowledge base, always try RAG
+        if self._rag.document_count > 0:
+            state["next_action"] = "rag"
+            return state
+
+        # RAG keywords (fallback when no documents)
         rag_keywords = ["文档", "资料", "知识库", "文件", "检索", "搜索资料", "rag", "RAG"]
         if any(kw in input_lower for kw in rag_keywords):
             state["next_action"] = "rag"
             return state
 
-        # Tool 关键词
+        # Tool 
         tool_keywords = ["计算", "算", "=", "+", "-", "*", "/", "时间", "几点", "日期"]
         if any(kw in input_lower for kw in tool_keywords):
             state["next_action"] = "tool"
@@ -357,9 +362,9 @@ class AgentWorkflow:
         state = await self._router(initial_state)
         state = await self._memory_retrieval(state)
 
-        if state["next_action"] == "rag":
+        if state["next_action"] == "rag" or self._rag.document_count > 0:
             state = await self._rag_retrieval(state)
-        elif state["next_action"] == "tool":
+        if state["next_action"] == "tool":
             state = await self._tool_planning(state)
             if state.get("tool_calls"):
                 state = await self._tool_execution(state)

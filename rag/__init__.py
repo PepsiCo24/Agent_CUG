@@ -126,7 +126,7 @@ class RAGPipeline:
     ) -> list[Document]:
         """检索相关文档"""
         k = top_k or self._top_k
-                # Fetch more candidates for better reranking coverage
+        # Fetch more candidates for better reranking coverage
         fetch_k = max(k * 4, 20)
         docs = await self._retriever.retrieve(query, top_k=fetch_k)
 

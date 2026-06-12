@@ -4,6 +4,7 @@
 
 (function () {
     "use strict";
+    "use strict";
 
 
     // ====== Auth State ======
@@ -40,6 +41,19 @@
         return data;
     }
 
+    async function migrateDeviceConversations() {
+        if (!authToken || !deviceId) return;
+        try {
+            var resp = await fetch("/api/auth/migrate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+                body: JSON.stringify({ device_id: deviceId }),
+            });
+            var data = await resp.json();
+            if (data.migrated > 0) console.log("Migrated " + data.migrated + " conversations");
+        } catch (e) { console.warn("Migration failed:", e); }
+    }
+
     async function doLogin() {
         var username = document.getElementById("loginUsername").value.trim();
         var password = document.getElementById("loginPassword").value;
@@ -53,6 +67,7 @@
             updateUserUI();
             showAuth(false);
             loadHistory();
+            migrateDeviceConversations();
         } catch (e) { showAuthError(e.message); }
     }
 
@@ -74,6 +89,7 @@
             updateUserUI();
             showAuth(false);
             loadHistory();
+            migrateDeviceConversations();
         } catch (e) { showAuthError(e.message); }
     }
 
@@ -82,6 +98,7 @@
         currentUser = null;
         localStorage.removeItem("agent_cug_token");
         localStorage.removeItem("agent_cug_user");
+        // Keep deviceId for anonymous history
         conversationId = null;
         updateUserUI();
         loadHistory();
@@ -269,6 +286,7 @@
         opts = opts || {};
         opts.headers = opts.headers || {};
         if (authToken) opts.headers["Authorization"] = "Bearer " + authToken;
+        if (deviceId) opts.headers["X-Device-Id"] = deviceId;
         return fetch(url, opts);
     }
 
@@ -296,12 +314,67 @@
     var ragQueryBtn = document.getElementById("ragQueryBtn");
     var ragResults = document.getElementById("ragResults");
     var docCountEl = document.getElementById("docCount");
+    var docTagsArea = document.getElementById("docTagsArea");
+    var docTagsList = document.getElementById("docTagsList");
 
     // ====== 状态 ======
     var conversationId = null;
     var isStreaming = false;
     var messages = [];
     var conversations = [];
+    var _pendingDeletes = {};
+    var deviceId = getDeviceId();
+    
+    // ====== Document Tag Management ======
+    function addDocTag(filename) {
+        for (var i = 0; i < uploadedFiles.length; i++) {
+            if (uploadedFiles[i].name === filename) return;
+        }
+        uploadedFiles.push({ name: filename, time: Date.now() });
+        renderDocTags();
+    }
+
+    function removeDocTag(filename) {
+        uploadedFiles = uploadedFiles.filter(function(f) { return f.name !== filename; });
+        renderDocTags();
+    }
+
+    function renderDocTags() {
+        if (!docTagsArea || !docTagsList) return;
+        if (uploadedFiles.length === 0) {
+            docTagsArea.style.display = 'none';
+            docTagsList.innerHTML = '';
+            return;
+        }
+        docTagsArea.style.display = 'flex';
+        var h = '';
+        for (var i = 0; i < uploadedFiles.length; i++) {
+            var f = uploadedFiles[i];
+            h += '<div class="doc-tag">' +
+                '<span class="tag-name" title="' + escAttr(f.name) + '">' + escHtml(f.name) + '</span>' +
+                '<span class="tag-remove" data-file="' + escAttr(f.name) + '">&times;</span>' +
+                '</div>';
+        }
+        docTagsList.innerHTML = h;
+        // Attach click handlers
+        var removes = docTagsList.querySelectorAll('.tag-remove');
+        for (var j = 0; j < removes.length; j++) {
+            removes[j].onclick = function() {
+                removeDocTag(this.getAttribute('data-file'));
+                refreshDocCount();
+            };
+        }
+    }
+var uploadedFiles = [];  // Track uploaded documents
+
+    function getDeviceId() {
+        var id = localStorage.getItem("agent_cug_did");
+        if (!id) {
+            id = "did-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 10);
+            localStorage.setItem("agent_cug_did", id);
+        }
+        return id;
+    }
 
     
     // ====== 暗色模式检测 ======
@@ -353,13 +426,18 @@
 
     function setText(id, val) { var el = document.getElementById(id); if (el && val != null) el.textContent = val; }
 
+    var _loadingHistory = false;
     async function loadHistory() {
+        if (_loadingHistory) return;
+        _loadingHistory = true;
         try {
-            var resp = await fetchWithAuth("/api/history");
+            var resp = await fetchWithAuth("/api/history?device_id=" + encodeURIComponent(deviceId));
             var data = await resp.json();
             conversations = data.conversations || [];
+            conversations = conversations.filter(function(c) { return !_pendingDeletes[c.id]; });
             renderHistory();
         } catch (e) { console.warn("\u5386\u53f2\u52a0\u8f7d\u5931\u8d25:", e); }
+        _loadingHistory = false;
     }
 
     function renderHistory() {
@@ -374,7 +452,7 @@
             var active = conv.id === conversationId ? " active" : "";
             html += "<div class=\"history-item" + active + "\" data-id=\"" + conv.id + "\">" +
                 "<div class=\"history-item-main\">" +
-                "<span class=\"history-title\">" + escHtml(conv.title) + "</span>" +
+                "<span class=\"history-title\">" + escHtml(stripMarkdown(conv.title)) + "</span>" +
                 "<span class=\"history-time\">" + formatTime(conv.created_at) + "</span>" +
                 "</div>" +
                 "<div class=\"history-actions\">" +
@@ -479,9 +557,11 @@
             if (btn) {
                 var code = btn.dataset.code || "";
                 copyToClipboard(code).then(function () {
+    "use strict";
                     btn.textContent = "\u2713 \u5df2\u590d\u5236";
                     btn.classList.add("copied");
-                    setTimeout(function () { btn.textContent = "\u590d\u5236"; btn.classList.remove("copied"); }, 2000);
+                    setTimeout(function () {
+    "use strict"; btn.textContent = "\u590d\u5236"; btn.classList.remove("copied"); }, 2000);
                 });
             }
         });
@@ -611,12 +691,28 @@
         if (!convId) return;
         showModal("删除对话", "确定要删除这个对话吗？此操作不可撤销。", false, function (confirmed) {
             if (!confirmed) return;
+            _pendingDeletes[convId] = true;
+            // Optimistic: remove from DOM immediately
+            conversations = conversations.filter(function(c) { return c.id !== convId; });
+            if (conversationId === convId) {
+                conversationId = null;
+                messages = [];
+                var rows = chatMessages.querySelectorAll(".message-row");
+                for (var ri = 0; ri < rows.length; ri++) rows[ri].remove();
+                if (welcomeScreen) { welcomeScreen.style.display = "flex"; }
+                messageInput.value = "";
+                messageInput.focus();
+            }
+            renderHistory();
+            // Confirm delete with server (rollback on failure)
             fetch("/api/history/" + convId, { method: "DELETE" }).then(function (resp) {
-                if (resp.ok) {
-                    if (conversationId === convId) startNewChat();
-                    loadHistory();
-                }
-            }).catch(function (e) { console.warn("删除失败:", e); });
+                delete _pendingDeletes[convId];
+                if (!resp.ok) loadHistory();
+            }).catch(function (e) {
+                console.warn("删除失败:", e);
+                delete _pendingDeletes[convId];
+                loadHistory();
+            });
         });
     }
 
@@ -659,10 +755,11 @@
             var response = await fetch("/api/chat/stream", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: text, conversation_id: conversationId }),
+                body: JSON.stringify({ message: text, conversation_id: conversationId, device_id: deviceId }),
             });
             if (!response.ok) {
-                var errData = await response.json().catch(function () { return {}; });
+                var errData = await response.json().catch(function () {
+    "use strict"; return {}; });
                 throw new Error(errData.detail || "\u8bf7\u6c42\u5931\u8d25: " + response.status);
             }
 
@@ -777,9 +874,11 @@
             copyBtn.addEventListener("click", function () {
                 var txt = contentDiv.textContent || "";
                 copyToClipboard(txt).then(function () {
+    "use strict";
                     copyBtn.classList.add("copied");
                     copyBtn.querySelector("span").textContent = "✓ 已复制";
                     setTimeout(function () {
+    "use strict";
                         copyBtn.classList.remove("copied");
                         copyBtn.querySelector("span").textContent = "复制";
                     }, 2000);
@@ -1173,10 +1272,11 @@
         fetch("/api/chat/stream", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text, conversation_id: conversationId }),
+            body: JSON.stringify({ message: text, conversation_id: conversationId, device_id: deviceId }),
         }).then(function (response) {
             if (!response.ok) {
-                return response.json().catch(function () { return {}; }).then(function (errData) {
+                return response.json().catch(function () {
+    "use strict"; return {}; }).then(function (errData) {
                     throw new Error(errData.detail || "????: " + response.status);
                 });
             }
@@ -1253,6 +1353,7 @@
 
 function scrollToBottom() {
         requestAnimationFrame(function () {
+    "use strict";
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
     }
@@ -1274,7 +1375,7 @@ function scrollToBottom() {
         var files = e.target.files;
         if (!files.length) return;
         for (var i = 0; i < files.length; i++) await uploadFile(files[i]);
-        fileInput.value = ""; refreshDocCount();
+        fileInput.value = ""; refreshDocCount(); renderDocTags();
     }
 
     async function handleRagFiles(files) {
@@ -1292,6 +1393,7 @@ function scrollToBottom() {
             formData.append("file", file);
             var resp = await fetch("/api/rag/upload", { method: "POST", body: formData });
             var result = await resp.json();
+            if (resp.ok) addDocTag(file.name);
             showUploadStatus(resp.ok ? "success" : "error",
                 (resp.ok ? "\u2705 " : "\u274c ") + file.name + " \u2014 " + (result.chunks || 0) + " \u4e2a\u5206\u5757" +
                 (resp.ok ? "\u5df2\u5bfc\u5165" : " \u4e0a\u4f20\u5931\u8d25: " + (result.detail || "")));
@@ -1303,7 +1405,8 @@ function scrollToBottom() {
         var el = document.createElement("div");
         el.className = type; el.textContent = message;
         uploadStatus.appendChild(el);
-        setTimeout(function () { el.remove(); }, 5000);
+        setTimeout(function () {
+    "use strict"; el.remove(); }, 5000);
     }
 
     async function refreshDocCount() {
@@ -1343,6 +1446,38 @@ function scrollToBottom() {
     }
 
     // ====== 工具函数 ======
+
+    function stripMarkdown(text) {
+        if (!text) return "";
+        text = String(text);
+        // Remove images (including truncated)
+        text = text.replace(/!\[([^\]]*)\]\([^)]*\)?/g, "$1");
+        // Remove links, keep text (handle truncated: missing closing paren)
+        text = text.replace(/\[([^\]]*)\]\([^)]*\)?/g, "$1");
+        // Remove bold markers (handle truncated)
+        text = text.replace(/\*\*([^*]*)\*?\*?/g, "$1");
+        text = text.replace(/__([^_]*)_?_?/g, "$1");
+        // Remove italic markers (handle truncated)
+        text = text.replace(/(?<!\*)\*([^*]*)\*?(?!\*)/g, "$1");
+        text = text.replace(/(?<!_)_([^_]*)_?(?!_)/g, "$1");
+        // Remove headers
+        text = text.replace(/^#{1,6}\s+/gm, "");
+        // Remove blockquotes
+        text = text.replace(/^>\s+/gm, "");
+        // Remove code markers
+        text = text.replace(/`([^`]*)`?/g, "$1");
+        // Remove strikethrough
+        text = text.replace(/~~([^~]*)~?~?/g, "$1");
+        // Remove horizontal rules
+        text = text.replace(/^[-*_]{3,}\s*$/gm, "");
+        // Remove list markers
+        text = text.replace(/^[\s]*[-*+]\s+/gm, "");
+        text = text.replace(/^[\s]*\d+\.\s+/gm, "");
+        // Collapse whitespace
+        text = text.replace(/\s+/g, " ").trim();
+        return text;
+    }
+
     function escHtml(text) {
         var div = document.createElement("div");
         div.textContent = text;
