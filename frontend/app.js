@@ -313,6 +313,12 @@
     var uploadDropzone = document.getElementById("uploadDropzone");
     var ragFileInput = document.getElementById("ragFileInput");
     var uploadStatus = document.getElementById("uploadStatus");
+    var docList = document.getElementById("docList");
+    var refreshDocListBtn = document.getElementById("refreshDocListBtn");
+    var docSelectBtn = document.getElementById("docSelectBtn");
+    var docSelectorDropdown = document.getElementById("docSelectorDropdown");
+    var docSelectorList = document.getElementById("docSelectorList");
+    var docSelectorCount = document.getElementById("docSelectorCount");
     var ragQueryInput = document.getElementById("ragQueryInput");
     var ragQueryBtn = document.getElementById("ragQueryBtn");
     var ragResults = document.getElementById("ragResults");
@@ -327,6 +333,8 @@
     var conversations = [];
     var _pendingDeletes = {};
     var deviceId = getDeviceId();
+    var selectedDocIds = []; // currently selected document IDs for RAG
+    var loadedDocs = []; // all loaded documents
     
     // ====== Document Tag Management ======
     function addDocTag(filename) {
@@ -541,6 +549,19 @@ var uploadedFiles = [];  // Track uploaded documents
         uploadDropzone.addEventListener("dragleave", function () { uploadDropzone.classList.remove("dragover"); });
         uploadDropzone.addEventListener("drop", function (e) { e.preventDefault(); uploadDropzone.classList.remove("dragover"); handleRagFiles(e.dataTransfer.files); });
         ragFileInput.addEventListener("change", function (e) { handleRagFiles(e.target.files); });
+        refreshDocListBtn.addEventListener("click", function() { loadDocList(); });
+        docSelectBtn.addEventListener("click", function(e) { 
+            e.stopPropagation();
+            toggleDocSelector();
+        });
+        // Close doc selector on outside click
+        document.addEventListener("click", function(e) {
+            if (docSelectorDropdown && docSelectorDropdown.style.display !== "none") {
+                if (!docSelectorDropdown.contains(e.target) && e.target !== docSelectBtn) {
+                    docSelectorDropdown.style.display = "none";
+                }
+            }
+        });
         ragQueryBtn.addEventListener("click", doRagQuery);
         ragQueryInput.addEventListener("keydown", function (e) { if (e.key === "Enter") doRagQuery(); });
         messageInput.addEventListener("input", autoResizeInput);
@@ -602,7 +623,7 @@ var uploadedFiles = [];  // Track uploaded documents
         ragPanel.classList.remove("active");
         settingsPanel.classList.remove("active");
         if (panel === "chat") chatPanel.classList.add("active");
-        else if (panel === "rag") { ragPanel.classList.add("active"); refreshDocCount(); }
+        else if (panel === "rag") { ragPanel.classList.add("active"); refreshDocCount(); loadDocList(); }
         else if (panel === "settings") { settingsPanel.classList.add("active"); loadConfig(); }
     }
 
@@ -1389,7 +1410,7 @@ function scrollToBottom() {
         var files = e.target.files;
         if (!files.length) return;
         for (var i = 0; i < files.length; i++) await uploadFile(files[i]);
-        fileInput.value = ""; refreshDocCount(); renderDocTags();
+        fileInput.value = ""; refreshDocCount(); renderDocTags(); loadDocList();
     }
 
     async function handleRagFiles(files) {
@@ -1398,7 +1419,7 @@ function scrollToBottom() {
             showUploadStatus("info", "\u23f3 \u6b63\u5728\u5904\u7406 " + files[i].name + "...");
             await uploadFile(files[i]);
         }
-        ragFileInput.value = ""; refreshDocCount();
+        ragFileInput.value = ""; refreshDocCount(); loadDocList();
     }
 
     async function uploadFile(file) {

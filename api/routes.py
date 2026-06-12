@@ -170,7 +170,7 @@ async def chat(request: ChatRequest, req: Request):
     if st == "none" and request.device_id:
         st, sid = "device", request.device_id
     try:
-        result = await agent.run(request.message, cid)
+        result = await agent.run(request.message, cid, doc_ids=request.doc_ids)
     except Exception as e:
         logger.error(f"Chat error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -215,7 +215,7 @@ async def chat_stream(request: ChatRequest, req: Request):
                 _history_store[cid] = entry
             entry["messages"] = _gm(entry) + [{"role": "user", "content": request.message}]
             _save_history_store(_history_store)
-            async for chunk in agent.run_stream(request.message, cid):
+            async for chunk in agent.run_stream(request.message, cid, doc_ids=request.doc_ids):
                 if chunk.startswith('{"type": "tool_call"'):
                     try:
                         tc = _json.loads(chunk)
@@ -382,8 +382,30 @@ async def list_documents(req: Request):
                 "filename": d["filename"],
                 "chunks": d.get("chunks", 0),
                 "created_at": d.get("created_at", ""),
+                "file_type": d.get("filename", "").rsplit(".", 1)[-1].lower() if d.get("filename") else "",
+                "file_path": d.get("file_path", ""),
             })
+    # Sort by created_at descending
+    docs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"documents": docs, "total": len(docs)}
+
+
+@router.put("/rag/documents/{doc_id}")
+async def rename_document(doc_id: str, body: dict, req: Request):
+    """Rename a document"""
+    st, sid = _resolve_scope(req)
+    _reload_docs()
+    d = _doc_store.get(doc_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="document not found")
+    if d.get("_owner_type") != st or d.get("_owner_id") != sid:
+        raise HTTPException(status_code=403, detail="permission denied")
+    new_name = body.get("filename", "").strip()
+    if not new_name:
+        raise HTTPException(status_code=422, detail="filename empty")
+    d["filename"] = new_name
+    _save_doc_store(_doc_store)
+    return {"status": "ok", "id": doc_id, "filename": new_name}
 
 
 @router.delete("/rag/documents/{doc_id}")

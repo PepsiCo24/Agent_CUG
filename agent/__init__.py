@@ -184,8 +184,16 @@ class AgentWorkflow:
         """RAG 检索"""
         logger.info("[RAG] 检索文档...")
         user_input = state["user_input"]
+        doc_ids = state.get("doc_ids") or None
 
-        context, docs = await self._rag.query_with_context(user_input)
+        if doc_ids:
+            docs = await self._rag.query_with_doc_ids(user_input, doc_ids=doc_ids)
+            context = "\n\n---\n\n".join(
+                f"[文档 {i+1}] (来源: {d.metadata.get('source', '未知')})\n{d.content}"
+                for i, d in enumerate(docs)
+            ) if docs else ""
+        else:
+            context, docs = await self._rag.query_with_context(user_input)
 
         state["retrieved_docs"] = docs
         state["rag_context"] = context
@@ -318,7 +326,7 @@ class AgentWorkflow:
 
     # ---- 公共接口 ----
 
-    async def run(self, user_input: str, conversation_id: str | None = None) -> AgentState:
+    async def run(self, user_input: str, conversation_id: str | None = None, doc_ids: list[str] | None = None) -> AgentState:
         """运行工作流"""
         initial_state: AgentState = {
             "user_input": user_input,
@@ -333,13 +341,14 @@ class AgentWorkflow:
             "final_answer": "",
             "next_action": "chat",
             "iteration": 0,
+            "doc_ids": doc_ids,
         }
 
         result = await self._graph.ainvoke(initial_state)
         return result
 
     async def run_stream(
-        self, user_input: str, conversation_id: str | None = None
+        self, user_input: str, conversation_id: str | None = None, doc_ids: list[str] | None = None
     ) -> AsyncIterator[str]:
         """流式运行工作流"""
         # 先用同步模式执行检索和工具
@@ -356,6 +365,7 @@ class AgentWorkflow:
             "final_answer": "",
             "next_action": "chat",
             "iteration": 0,
+            "doc_ids": doc_ids,
         }
 
         # 执行路由和检索
