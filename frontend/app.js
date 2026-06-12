@@ -785,10 +785,12 @@ var uploadedFiles = [];  // Track uploaded documents
         try {
             var headers = { "Content-Type": "application/json" };
             if (authToken) headers["Authorization"] = "Bearer " + authToken;
+            var chatBody = { message: text, conversation_id: conversationId, device_id: deviceId };
+            if (selectedDocIds.length > 0) chatBody.doc_ids = selectedDocIds;
             var response = await fetch("/api/chat/stream", {
                 method: "POST",
                 headers: headers,
-                body: JSON.stringify({ message: text, conversation_id: conversationId, device_id: deviceId }),
+                body: JSON.stringify(chatBody),
             });
             if (!response.ok) {
                 var errData = await response.json().catch(function () {
@@ -1304,10 +1306,12 @@ var uploadedFiles = [];  // Track uploaded documents
 
         var _headers = { "Content-Type": "application/json" };
             if (authToken) _headers["Authorization"] = "Bearer " + authToken;
+            var chatBody2 = { message: text, conversation_id: conversationId, device_id: deviceId };
+            if (selectedDocIds.length > 0) chatBody2.doc_ids = selectedDocIds;
             fetch("/api/chat/stream", {
             method: "POST",
             headers: _headers,
-            body: JSON.stringify({ message: text, conversation_id: conversationId, device_id: deviceId }),
+            body: JSON.stringify(chatBody2),
         }).then(function (response) {
             if (!response.ok) {
                 return response.json().catch(function () {
