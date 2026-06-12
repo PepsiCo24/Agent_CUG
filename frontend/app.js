@@ -863,6 +863,11 @@ var uploadedFiles = [];  // Track uploaded documents
                     try {
                         var payload = JSON.parse(data);
                         conversationId = payload.conversation_id;
+                        // Fallback: use full_answer if streaming produced no tokens
+                        if (!fullText && payload.full_answer) {
+                            fullText = payload.full_answer;
+                            if (contentEl) contentEl.innerHTML = renderFinal(fullText, toolCalls);
+                        }
                     } catch (e) {}
                 } else if (event === "error") {
                     contentEl.innerHTML = "<p style=\"color:#ef4444\">\u9519\u8bef: " + escHtml(data) + "</p>";
@@ -1450,6 +1455,11 @@ function renderFinal(text, toolCalls) {
                     try {
                         var payload = JSON.parse(data);
                         conversationId = payload.conversation_id;
+                        // Fallback: use full_answer if streaming produced no tokens
+                        if (!fullText && payload.full_answer) {
+                            fullText = payload.full_answer;
+                            if (contentEl) contentEl.innerHTML = renderFinal(fullText, toolCalls);
+                        }
                     } catch (e) {}
                 } else if (event === "error") {
                     if (contentEl2) contentEl2.innerHTML = "<p style=\"color:#ef4444\">\u9519\u8bef: " + escHtml(data) + "</p>";
