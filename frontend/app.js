@@ -787,7 +787,7 @@ var uploadedFiles = [];  // Track uploaded documents
         messageInput.value = "";
         messageInput.style.height = "auto";
 
-        var assistantRow = addMessage("assistant", "", true);
+        var assistantRow = addMessage("assistant", "<span class=\x22streaming-loader\x22>\u6b63\u5728\u601d\u8003\u4e2d...</span>", true);
         var contentEl = assistantRow.querySelector(".message-content");
         var toolCallEl = null;
         var fullText = "";

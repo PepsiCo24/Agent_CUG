@@ -415,17 +415,9 @@ class AgentWorkflow:
                 })
             yield _json.dumps({"type": "rag_docs", "documents": rag_docs_info})
 
-        # Store retrieved docs in memory system
-        if retrieved_docs:
-            for d in retrieved_docs:
-                src = d.metadata.get("source", "unknown") if hasattr(d, "metadata") else "unknown"
-                doc_content = d.content if hasattr(d, "content") else ""
-                await self._memory.add(MemoryItem(
-                    id="",
-                    content=f"[RAG检索召回] 文档来源: {src} | 内容摘要: {doc_content[:500]}",
-                    role="system",
-                    metadata={"source": src, "type": "rag_retrieval", "score": d.score if hasattr(d, "score") else 0}
-                ))
+
+        # Store retrieved docs reference for later memory storage
+        _retrieved_docs_for_memory = retrieved_docs
 
         if observations:
             import json as _json
@@ -443,6 +435,18 @@ class AgentWorkflow:
 
         # Clean text formatting artifacts (number spacing, CJK breaks, etc.)
         full_answer = _clean_answer(full_answer)
+
+        # Store retrieved docs in memory (deferred to avoid blocking stream)
+        if _retrieved_docs_for_memory:
+            for d in _retrieved_docs_for_memory:
+                src = d.metadata.get("source", "unknown") if hasattr(d, "metadata") else "unknown"
+                doc_content = d.content if hasattr(d, "content") else ""
+                await self._memory.add(MemoryItem(
+                    id="",
+                    content=f"[RAG检索召回] 文档来源: {src} | 内容摘要: {doc_content[:500]}",
+                    role="system",
+                    metadata={"source": src, "type": "rag_retrieval", "score": d.score if hasattr(d, "score") else 0}
+                ))
 
         # 保存记忆
         await self._memory.add(MemoryItem(
