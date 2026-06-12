@@ -422,7 +422,7 @@ class AgentWorkflow:
                 doc_content = d.content if hasattr(d, "content") else ""
                 await self._memory.add(MemoryItem(
                     id="",
-                    content=f"[RAG????] ????: {src} | ????: {doc_content[:500]}",
+                    content=f"[RAG检索召回] 文档来源: {src} | 内容摘要: {doc_content[:500]}",
                     role="system",
                     metadata={"source": src, "type": "rag_retrieval", "score": d.score if hasattr(d, "score") else 0}
                 ))
