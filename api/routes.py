@@ -1,4 +1,4 @@
-"""API Routes - FastAPI with user/device isolation"""
+﻿"""API Routes - FastAPI with user/device isolation"""
 from __future__ import annotations
 import json as _json, logging, uuid
 from datetime import datetime, timezone
@@ -216,7 +216,12 @@ async def chat_stream(request: ChatRequest, req: Request):
             entry["messages"] = _gm(entry) + [{"role": "user", "content": request.message}]
             _save_history_store(_history_store)
             async for chunk in agent.run_stream(request.message, cid, doc_ids=request.doc_ids):
-                if chunk.startswith('{"type": "tool_call"'):
+                                if chunk.startswith('{"type": "rag_docs"'):
+                    try:
+                        rd = _json.loads(chunk)
+                        yield {"event": "rag_docs", "data": _json.dumps(rd.get("documents", []))}
+                    except _json.JSONDecodeError: pass
+                elif chunk.startswith('{"type": "tool_call"')::
                     try:
                         tc = _json.loads(chunk)
                         yield {"event": "tool_call", "data": _json.dumps({"name": tc.get("name","?"), "arguments": tc.get("arguments",{})})}
@@ -393,24 +398,6 @@ async def list_documents(req: Request):
     return {"documents": docs, "total": len(docs)}
 
 
-@router.put("/rag/documents/{doc_id}")
-async def rename_document(doc_id: str, body: dict, req: Request):
-    """Rename a document"""
-    st, sid = _resolve_scope(req)
-    _reload_docs()
-    d = _doc_store.get(doc_id)
-    if not d:
-        raise HTTPException(status_code=404, detail="document not found")
-    if d.get("_owner_type") != st or d.get("_owner_id") != sid:
-        raise HTTPException(status_code=403, detail="permission denied")
-    new_name = body.get("filename", "").strip()
-    if not new_name:
-        raise HTTPException(status_code=422, detail="filename empty")
-    d["filename"] = new_name
-    _save_doc_store(_doc_store)
-    return {"status": "ok", "id": doc_id, "filename": new_name}
-
-
 @router.delete("/rag/documents/{doc_id}")
 async def delete_document(doc_id: str, req: Request):
     """Delete a document and its chunks"""
@@ -449,3 +436,5 @@ async def get_config():
         "rag_enabled": True,
         "rag_document_count": RAGPipeline().document_count,
     }
+
+

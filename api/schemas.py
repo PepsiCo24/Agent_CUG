@@ -43,6 +43,7 @@ class FileUploadResponse(BaseModel):
     filename: str = Field(..., description="文件名")
     chunks: int = Field(0, description="分块数量")
     status: str = Field("ok")
+    doc_id: str | None = Field(None, description="文档ID")
 
 
 class HealthResponse(BaseModel):

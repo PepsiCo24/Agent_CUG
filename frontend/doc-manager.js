@@ -35,11 +35,6 @@ function renderDocList() {
                 '</div>' +
             '</div>' +
             '<div class="doc-list-actions">' +
-                '<button class="doc-list-action-btn" data-action="rename" title="重命名">' +
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                        '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>' +
-                        '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>' +
-                    '</svg></button>' +
                 '<button class="doc-list-action-btn danger" data-action="delete" title="删除">' +
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
                         '<polyline points="3 6 5 6 21 6"></polyline>' +
@@ -57,7 +52,6 @@ function renderDocList() {
             var docId = item.dataset.id;
             var action = this.dataset.action;
             if (action === "delete") deleteDocument(docId, item);
-            else if (action === "rename") renameDocument(docId, item);
         });
     }
 }
@@ -86,24 +80,7 @@ async function deleteDocument(docId, itemEl) {
     } catch (e) { alert("删除失败: " + e.message); }
 }
 
-async function renameDocument(docId, itemEl) {
-    var newName = prompt("请输入新文件名:", "");
-    if (!newName || !newName.trim()) return;
-    newName = newName.trim();
-    try {
-        var resp = await fetchWithAuth("/api/rag/documents/" + docId, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filename: newName }),
-        });
-        if (!resp.ok) throw new Error("重命名失败");
-        var doc = loadedDocs.find(function(d) { return d.id === docId; });
-        if (doc) doc.filename = newName;
-        renderDocList();
-        renderDocSelector();
-        renderDocTags();
-    } catch (e) { alert("重命名失败: " + e.message); }
-}
+
 
 // ====== 文档选择器 ======
 function toggleDocSelector() {
@@ -201,3 +178,4 @@ function updateDocSelectBtn() {
         }
     }
 }
+
