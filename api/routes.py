@@ -216,12 +216,12 @@ async def chat_stream(request: ChatRequest, req: Request):
             entry["messages"] = _gm(entry) + [{"role": "user", "content": request.message}]
             _save_history_store(_history_store)
             async for chunk in agent.run_stream(request.message, cid, doc_ids=request.doc_ids):
-                                if chunk.startswith('{"type": "rag_docs"'):
+                if chunk.startswith('{"type": "rag_docs"'):
                     try:
                         rd = _json.loads(chunk)
                         yield {"event": "rag_docs", "data": _json.dumps(rd.get("documents", []))}
                     except _json.JSONDecodeError: pass
-                elif chunk.startswith('{"type": "tool_call"')::
+                elif chunk.startswith('{"type": "tool_call"'):
                     try:
                         tc = _json.loads(chunk)
                         yield {"event": "tool_call", "data": _json.dumps({"name": tc.get("name","?"), "arguments": tc.get("arguments",{})})}

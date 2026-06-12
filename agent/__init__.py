@@ -1,9 +1,9 @@
-﻿"""
-Agent Workflow 鈥?LangGraph + ReAct 瀹炵幇
+"""
+Agent Workflow — LangGraph + ReAct 实现
 
-宸ヤ綔娴侊細
-User Input 鈫?Router 鈫?Memory Retrieval 鈫?RAG Retrieval 鈫?
-Tool Planning 鈫?Tool Execution 鈫?Prompt Builder 鈫?LLM 鈫?Final Answer
+工作流：
+User Input → Router → Memory Retrieval → RAG Retrieval →
+Tool Planning → Tool Execution → Prompt Builder → LLM → Final Answer
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def _clean_answer(text: str) -> str:
     return text
 
 class AgentWorkflow:
-    """Agent 宸ヤ綔娴佸紩鎿?""
+    """Agent 工作流引擎"""
 
     def __init__(self) -> None:
         self._llm = create_llm()
@@ -60,10 +60,10 @@ class AgentWorkflow:
         self._graph = self._build_graph()
 
     def _build_graph(self) -> StateGraph:
-        """鏋勫缓 LangGraph 鐘舵€佸浘"""
+        """构建 LangGraph 状态图"""
         workflow = StateGraph(AgentState)
 
-        # 娣诲姞鑺傜偣
+        # 添加节点
         workflow.add_node("router", self._router)
         workflow.add_node("memory_retrieval", self._memory_retrieval)
         workflow.add_node("rag_retrieval", self._rag_retrieval)
@@ -72,10 +72,10 @@ class AgentWorkflow:
         workflow.add_node("prompt_builder", self._prompt_builder)
         workflow.add_node("llm_generate", self._llm_generate)
 
-        # 鍏ュ彛
+        # 入口
         workflow.set_entry_point("router")
 
-        # 璺敱鍒嗘敮
+        # 路由分支
         workflow.add_conditional_edges(
             "router",
             self._route_decision,
@@ -86,7 +86,7 @@ class AgentWorkflow:
             },
         )
 
-        # 璁板繂妫€绱?鈫?涓嬩竴璺?
+        # 记忆检索 → 下一跳
         workflow.add_conditional_edges(
             "memory_retrieval",
             self._after_memory,
@@ -97,10 +97,10 @@ class AgentWorkflow:
             },
         )
 
-        # RAG 鈫?Prompt Builder
+        # RAG → Prompt Builder
         workflow.add_edge("rag_retrieval", "prompt_builder")
 
-        # 宸ュ叿瑙勫垝 鈫?宸ュ叿鎵ц
+        # 工具规划 → 工具执行
         workflow.add_conditional_edges(
             "tool_planning",
             self._after_tool_planning,
@@ -110,25 +110,25 @@ class AgentWorkflow:
             },
         )
 
-        # 宸ュ叿鎵ц 鈫?Prompt Builder
+        # 工具执行 → Prompt Builder
         workflow.add_edge("tool_execution", "prompt_builder")
 
-        # Prompt Builder 鈫?LLM
+        # Prompt Builder → LLM
         workflow.add_edge("prompt_builder", "llm_generate")
 
-        # LLM 鈫?END
+        # LLM → END
         workflow.add_edge("llm_generate", END)
 
         return workflow.compile()
 
-    # ---- 鑺傜偣瀹炵幇 ----
+    # ---- 节点实现 ----
 
     async def _router(self, state: AgentState) -> dict[str, Any]:
-        """璺敱鍣細鍒嗘瀽鐢ㄦ埛鎰忓浘"""
+        """路由器：分析用户意图"""
         user_input = state["user_input"]
-        logger.info(f"[Router] 鍒嗘瀽鐢ㄦ埛杈撳叆: {user_input[:50]}...")
+        logger.info(f"[Router] 分析用户输入: {user_input[:50]}...")
 
-        # 绠€鍗曡鍒欒矾鐢?
+        # 简单规则路由
         input_lower = user_input.lower().strip()
 
         # If documents exist in knowledge base, always try RAG
@@ -137,43 +137,43 @@ class AgentWorkflow:
             return state
 
         # RAG keywords (fallback when no documents)
-        rag_keywords = ["鏂囨。", "璧勬枡", "鐭ヨ瘑搴?, "鏂囦欢", "妫€绱?, "鎼滅储璧勬枡", "rag", "RAG"]
+        rag_keywords = ["文档", "资料", "知识库", "文件", "检索", "搜索资料", "rag", "RAG"]
         if any(kw in input_lower for kw in rag_keywords):
             state["next_action"] = "rag"
             return state
 
         # Tool 
-        tool_keywords = ["璁＄畻", "绠?, "=", "+", "-", "*", "/", "鏃堕棿", "鍑犵偣", "鏃ユ湡"]
+        tool_keywords = ["计算", "算", "=", "+", "-", "*", "/", "时间", "几点", "日期"]
         if any(kw in input_lower for kw in tool_keywords):
             state["next_action"] = "tool"
             return state
 
-        # 榛樿锛氱洿鎺ュ璇?
+        # 默认：直接对话
         state["next_action"] = "chat"
         return state
 
     async def _memory_retrieval(self, state: AgentState) -> dict[str, Any]:
-        """璁板繂妫€绱?""
-        logger.info("[Memory] 妫€绱㈢浉鍏宠蹇?..")
+        """记忆检索"""
+        logger.info("[Memory] 检索相关记忆...")
         user_input = state["user_input"]
 
-        # 妫€绱㈤暱鏈熻蹇?
+        # 检索长期记忆
         mem_items = await self._memory.retrieve(user_input, top_k=3)
 
-        # 鑾峰彇杩戞湡瀵硅瘽
+        # 获取近期对话
         recent = await self._memory.get_recent(limit=10)
 
         state["retrieved_memory"] = mem_items
 
-        # 鏋勫缓璁板繂涓婁笅鏂?
+        # 构建记忆上下文
         parts: list[str] = []
         if mem_items:
-            parts.append("### 鐩稿叧璁板繂")
+            parts.append("### 相关记忆")
             for item in mem_items:
                 parts.append(f"- [{item.role}]: {item.content[:200]}")
 
         if recent:
-            parts.append("\n### 杩戞湡瀵硅瘽")
+            parts.append("\n### 近期对话")
             for item in recent:
                 parts.append(f"- [{item.role}]: {item.content[:200]}")
 
@@ -181,15 +181,15 @@ class AgentWorkflow:
         return state
 
     async def _rag_retrieval(self, state: AgentState) -> dict[str, Any]:
-        """RAG 妫€绱?""
-        logger.info("[RAG] 妫€绱㈡枃妗?..")
+        """RAG 检索"""
+        logger.info("[RAG] 检索文档...")
         user_input = state["user_input"]
         doc_ids = state.get("doc_ids") or None
 
         if doc_ids:
             docs = await self._rag.query_with_doc_ids(user_input, doc_ids=doc_ids)
             context = "\n\n---\n\n".join(
-                f"[鏂囨。 {i+1}] (鏉ユ簮: {d.metadata.get('source', '鏈煡')})\n{d.content}"
+                f"[文档 {i+1}] (来源: {d.metadata.get('source', '未知')})\n{d.content}"
                 for i, d in enumerate(docs)
             ) if docs else ""
         else:
@@ -198,26 +198,26 @@ class AgentWorkflow:
         state["retrieved_docs"] = docs
         state["rag_context"] = context
 
-        logger.info(f"[RAG] 妫€绱㈠埌 {len(docs)} 绡囨枃妗?)
+        logger.info(f"[RAG] 检索到 {len(docs)} 篇文档")
         return state
 
     async def _tool_planning(self, state: AgentState) -> dict[str, Any]:
-        """宸ュ叿瑙勫垝"""
-        logger.info("[Tool] 瑙勫垝宸ュ叿璋冪敤...")
+        """工具规划"""
+        logger.info("[Tool] 规划工具调用...")
         user_input = state["user_input"]
 
-        # 绠€鍗曡鍒欙細妫€娴嬭绠楀拰鏃堕棿鐨勭簿纭渶姹?
+        # 简单规则：检测计算和时间的精确需求
         tool_calls: list[dict[str, Any]] = []
 
         if any(c in user_input for c in "+-*/%0123456789") and any(
-            kw in user_input.lower() for kw in ["绠?, "=", "澶氬皯", "绛変簬", "璁＄畻"]
+            kw in user_input.lower() for kw in ["算", "=", "多少", "等于", "计算"]
         ):
             tool_calls.append({
                 "name": "calculate",
                 "arguments": {"expression": user_input},
             })
 
-        if any(kw in user_input.lower() for kw in ["鏃堕棿", "鍑犵偣", "鏃ユ湡", "鏄熸湡"]):
+        if any(kw in user_input.lower() for kw in ["时间", "几点", "日期", "星期"]):
             tool_calls.append({
                 "name": "get_current_time",
                 "arguments": {},
@@ -227,8 +227,8 @@ class AgentWorkflow:
         return state
 
     async def _tool_execution(self, state: AgentState) -> dict[str, Any]:
-        """宸ュ叿鎵ц"""
-        logger.info("[Tool] 鎵ц宸ュ叿...")
+        """工具执行"""
+        logger.info("[Tool] 执行工具...")
         observations: list[str] = []
 
         for tc in state.get("tool_calls", []):
@@ -238,26 +238,26 @@ class AgentWorkflow:
             if result.success:
                 observations.append(f"[{tc['name']}]: {result.output}")
             else:
-                observations.append(f"[{tc['name']}] 閿欒: {result.error}")
+                observations.append(f"[{tc['name']}] 错误: {result.error}")
 
         state["observations"] = observations
         return state
 
     async def _prompt_builder(self, state: AgentState) -> dict[str, Any]:
-        """鏋勫缓 Prompt"""
-        # 姝よ妭鐐逛富瑕佹槸缁勮涓婁笅鏂囷紝瀹為檯 prompt 鍦?_llm_generate 涓瀯寤?
+        """构建 Prompt"""
+        # 此节点主要是组装上下文，实际 prompt 在 _llm_generate 中构建
         return state
 
     async def _llm_generate(self, state: AgentState) -> dict[str, Any]:
-        """LLM 鐢熸垚鏈€缁堝洖绛?""
-        logger.info("[LLM] 鐢熸垚鍥炵瓟...")
+        """LLM 生成最终回答"""
+        logger.info("[LLM] 生成回答...")
 
-        # 鏋勫缓娑堟伅
+        # 构建消息
         messages: list[Message] = [
             Message(role="system", content=SYSTEM_PROMPT),
         ]
 
-        # 娣诲姞 RAG 涓婁笅鏂?
+        # 添加 RAG 上下文
         user_prompt = state["user_input"]
         rag_context = state.get("rag_context", "")
         memory_context = state.get("memory_context", "")
@@ -266,32 +266,32 @@ class AgentWorkflow:
         extra_context: list[str] = []
 
         if rag_context:
-            extra_context.append(f"## 鍙傝€冩枃妗n{rag_context}")
+            extra_context.append(f"## 参考文档\n{rag_context}")
 
         if memory_context:
-            extra_context.append(f"## 鍘嗗彶璁板繂\n{memory_context}")
+            extra_context.append(f"## 历史记忆\n{memory_context}")
 
         if observations:
-            extra_context.append(f"## 宸ュ叿缁撴灉\n" + "\n".join(observations))
+            extra_context.append(f"## 工具结果\n" + "\n".join(observations))
 
         if extra_context:
             user_prompt = (
                 "\n\n".join(extra_context)
-                + f"\n\n## 鐢ㄦ埛闂\n{user_prompt}"
+                + f"\n\n## 用户问题\n{user_prompt}"
             )
 
         messages.append(Message(role="user", content=user_prompt))
 
-        # 鑾峰彇宸ュ叿瀹氫箟锛堝鏋滄湁宸ュ叿闇€姹傦級
+        # 获取工具定义（如果有工具需求）
         tools = None
         if state.get("tool_calls") or state.get("next_action") == "tool":
             tools = self._tool_registry.get_definitions()
 
-        # 璋冪敤 LLM
+        # 调用 LLM
         response = await self._llm.chat(messages, tools=tools)
         state["final_answer"] = response.content
 
-        # 淇濆瓨鍒拌蹇?
+        # 保存到记忆
         await self._memory.add(MemoryItem(
             id="",
             content=state["user_input"],
@@ -305,7 +305,7 @@ class AgentWorkflow:
 
         return state
 
-    # ---- 鏉′欢璺敱 ----
+    # ---- 条件路由 ----
 
     def _route_decision(
         self, state: AgentState
@@ -324,10 +324,10 @@ class AgentWorkflow:
             return "execute"
         return "skip"
 
-    # ---- 鍏叡鎺ュ彛 ----
+    # ---- 公共接口 ----
 
     async def run(self, user_input: str, conversation_id: str | None = None, doc_ids: list[str] | None = None) -> AgentState:
-        """杩愯宸ヤ綔娴?""
+        """运行工作流"""
         initial_state: AgentState = {
             "user_input": user_input,
             "conversation_id": conversation_id,
@@ -350,8 +350,8 @@ class AgentWorkflow:
     async def run_stream(
         self, user_input: str, conversation_id: str | None = None, doc_ids: list[str] | None = None
     ) -> AsyncIterator[str]:
-        """娴佸紡杩愯宸ヤ綔娴?""
-        # 鍏堢敤鍚屾妯″紡鎵ц妫€绱㈠拰宸ュ叿
+        """流式运行工作流"""
+        # 先用同步模式执行检索和工具
         initial_state: AgentState = {
             "user_input": user_input,
             "conversation_id": conversation_id,
@@ -368,7 +368,7 @@ class AgentWorkflow:
             "doc_ids": doc_ids,
         }
 
-        # 鎵ц璺敱鍜屾绱?
+        # 执行路由和检索
         state = await self._router(initial_state)
         state = await self._memory_retrieval(state)
 
@@ -379,7 +379,7 @@ class AgentWorkflow:
             if state.get("tool_calls"):
                 state = await self._tool_execution(state)
 
-        # 鏋勫缓 prompt 骞舵祦寮忚緭鍑?
+        # 构建 prompt 并流式输出
         messages: list[Message] = [
             Message(role="system", content=SYSTEM_PROMPT),
         ]
@@ -391,16 +391,17 @@ class AgentWorkflow:
 
         extra_context: list[str] = []
         if rag_context:
-            extra_context.append(f"## 鍙傝€冩枃妗n{rag_context}")
+            extra_context.append(f"## 参考文档\n{rag_context}")
         if memory_context:
-            extra_context.append(f"## 鍘嗗彶璁板繂\n{memory_context}")
+            extra_context.append(f"## 历史记忆\n{memory_context}")
         if observations:
-            extra_context.append(f"## 宸ュ叿缁撴灉\n" + "\n".join(observations))
+            extra_context.append(f"## 工具结果\n" + "\n".join(observations))
         if extra_context:
-            user_prompt = "\n\n".join(extra_context) + f"\n\n## 鐢ㄦ埛闂\n{user_prompt}"
+            user_prompt = "\n\n".join(extra_context) + f"\n\n## 用户问题\n{user_prompt}"
 
         messages.append(Message(role="user", content=user_prompt))
 
+        # 流式输出（先发送工具调用信息）
         # Yield RAG document info for frontend display
         retrieved_docs = state.get("retrieved_docs", [])
         if retrieved_docs:
@@ -421,12 +422,11 @@ class AgentWorkflow:
                 doc_content = d.content if hasattr(d, "content") else ""
                 await self._memory.add(MemoryItem(
                     id="",
-                    content=f"[RAG检索召回] 文档来源: {src} | 内容摘要: {doc_content[:500]}",
+                    content=f"[RAG????] ????: {src} | ????: {doc_content[:500]}",
                     role="system",
                     metadata={"source": src, "type": "rag_retrieval", "score": d.score if hasattr(d, "score") else 0}
                 ))
 
-        # 娴佸紡杈撳嚭锛堝厛鍙戦€佸伐鍏疯皟鐢ㄤ俊鎭級
         if observations:
             import json as _json
             for obs in observations:
@@ -444,7 +444,7 @@ class AgentWorkflow:
         # Clean text formatting artifacts (number spacing, CJK breaks, etc.)
         full_answer = _clean_answer(full_answer)
 
-        # 淇濆瓨璁板繂
+        # 保存记忆
         await self._memory.add(MemoryItem(
             id="", content=state["user_input"], role="user",
         ))
@@ -453,7 +453,7 @@ class AgentWorkflow:
         ))
 
 
-# 鍏ㄥ眬鍗曚緥
+# 全局单例
 _agent_instance: AgentWorkflow | None = None
 
 
@@ -462,4 +462,3 @@ def get_agent() -> AgentWorkflow:
     if _agent_instance is None:
         _agent_instance = AgentWorkflow()
     return _agent_instance
-
