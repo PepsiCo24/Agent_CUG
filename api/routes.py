@@ -199,59 +199,6 @@ async def chat(request: ChatRequest, req: Request):
 
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest, req: Request):
-    """Streaming chat endpoint with SSE - supports all agent modes"""
-    user_input = request.message or request.user_input or ""
-    mode = request.mode or "chat"
-    if not user_input or not user_input.strip():
-        raise HTTPException(status_code=422, detail="message empty")
-
-    agent = get_agent()
-    cid = request.conversation_id or str(uuid.uuid4())
-    st, sid = _resolve_scope(req)
-    if st == "none" and request.device_id:
-        st, sid = "device", request.device_id
-
-    async def event_generator():
-        try:
-            full_answer = ""
-            async for token in agent.run_stream(
-                user_input, cid, doc_ids=request.doc_ids, mode=mode
-            ):
-                # Check if token is JSON metadata
-                if token.startswith("{") and '"type"' in token:
-                    yield {"event": "metadata", "data": token}
-                else:
-                    full_answer += token
-                    yield {"event": "token", "data": token}
-
-            # Save to history
-            _reload(); _migrate_legacy()
-            if cid not in _history_store:
-                _history_store[cid] = {
-                    "messages": [], "title": user_input[:30],
-                    "_owner_type": st, "_owner_id": sid,
-                    "created_at": datetime.now(timezone.utc).isoformat()
-                }
-            entry = _history_store[cid]
-            if isinstance(entry, list):
-                entry = {"messages": entry, "title": user_input[:30], "_owner_type": st, "_owner_id": sid}
-                _history_store[cid] = entry
-            msgs = _gm(entry)
-            msgs.append({"role": "user", "content": user_input})
-            msgs.append({"role": "assistant", "content": full_answer})
-            entry["messages"] = msgs
-            _save_history_store(_history_store)
-
-        except Exception as e:
-            logger.error(f"Stream error: {e}")
-            yield {"event": "error", "data": str(e)}
-
-    return EventSourceResponse(event_generator())
-
-
-
-@router.post("/chat/stream")
-async def chat_stream(request: ChatRequest, req: Request):
     if not request.message or not request.message.strip():
         raise HTTPException(status_code=422, detail="message empty")
     agent = get_agent()
