@@ -1653,6 +1653,7 @@ async function loadDocList() {
 
 function renderDocList() {
     if (!docList) return;
+    if (_renamingDocId) return; // Don't re-render during inline rename
     if (loadedDocs.length === 0) {
         docList.innerHTML = '<div class="doc-list-empty">暂无文档，上传文件即可开始</div>';
         return;
@@ -1708,17 +1709,72 @@ function getDocIcon(filename) {
     return "\u{1F4CE}";
 }
 
-    async function renameDocument(docId) {
-        var newName = prompt("请输入新文件名:");
-        if (!newName) return;
+    var _renamingDocId = null;
+
+    function startRename(docId) {
+        // Cancel any ongoing rename
+        cancelRename();
+
+        var item = document.querySelector('.doc-list-item[data-id="' + docId + '"]');
+        if (!item) return;
+        var nameEl = item.querySelector('.doc-list-name');
+        if (!nameEl) return;
+
+        var currentName = nameEl.textContent.trim();
+        _renamingDocId = docId;
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'doc-rename-input';
+        input.value = currentName;
+        input.setAttribute('data-doc-id', docId);
+
+        // Select filename without extension for convenience
+        var dotIdx = currentName.lastIndexOf('.');
+        if (dotIdx > 0) {
+            input.setSelectionRange(0, dotIdx);
+        } else {
+            input.select();
+        }
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); commitRename(docId, input.value.trim()); }
+            else if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
+        });
+
+        input.addEventListener('blur', function() {
+            setTimeout(function() {
+                if (_renamingDocId === docId) commitRename(docId, input.value.trim());
+            }, 150);
+        });
+
+        nameEl.innerHTML = '';
+        nameEl.appendChild(input);
+        input.focus();
+    }
+
+    function cancelRename() {
+        if (_renamingDocId) {
+            _renamingDocId = null;
+            loadDocList();
+        }
+    }
+
+    async function commitRename(docId, newName) {
+        if (!newName || _renamingDocId !== docId) return;
+        _renamingDocId = null;
         try {
             var resp = await fetchWithAuth("/api/rag/documents/" + docId + "/rename", {
                 method: "PUT",
                 body: JSON.stringify({ filename: newName })
             });
             if (!resp.ok) throw new Error("重命名失败");
-            loadDocList();
-        } catch (e) { alert("重命名失败: " + e.message); }
+        } catch (e) { /* silent */ }
+        loadDocList();
+    }
+
+    function renameDocument(docId) {
+        startRename(docId);
     }
 
 async function deleteDocument(docId, itemEl) {

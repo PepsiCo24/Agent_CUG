@@ -1207,3 +1207,12 @@ html, body {
 }
 .mode-select:hover { border-color: var(--border-strong); }
 .mode-select:focus { border-color: var(--brand-purple); color: var(--text-primary); }
+
+
+/* Inline rename input */
+.doc-rename-input {
+    width: 100%%; padding: 2px 6px; background: var(--surface-secondary);
+    border: 1px solid var(--brand-purple); border-radius: 4px;
+    color: var(--text-primary); font-size: 13px; font-family: inherit;
+    outline: none; box-sizing: border-box;
+}
