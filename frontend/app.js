@@ -877,14 +877,10 @@ var uploadedFiles = [];  // Track uploaded documents
 
             if (contentEl) {
                 contentEl.classList.remove("streaming-cursor");
-                // Force reflow before final render
-                void contentEl.offsetHeight;
                 // Update rag docs bar on final render
                 if (ragDocs.length > 0) renderRagDocsBar(assistantRow, ragDocs, sentDocNames);
                 fullText = cleanText(fullText);
                 contentEl.innerHTML = renderFinal(fullText, toolCalls);
-                // Force final repaint
-                void contentEl.offsetHeight;
             }
             messages.push({ role: "assistant", content: fullText });
             loadHistory();
@@ -967,10 +963,10 @@ var uploadedFiles = [];  // Track uploaded documents
                     "<div class=\"tool-result\">" + escHtml(String(toolCalls[i].result || "")) + "</div></div>";
             }
         }
+        text = cleanText(text);
         html += renderContentWithThinking(text);
         el.innerHTML = html;
         el.classList.add("streaming-cursor");
-        void el.offsetHeight;
     }
 
     // ====== ????????Gemini?????????????======

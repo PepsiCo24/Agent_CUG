@@ -217,19 +217,9 @@ async def chat_stream(request: ChatRequest, req: Request):
             async for token in agent.run_stream(
                 user_input, cid, doc_ids=request.doc_ids, mode=mode
             ):
-                # Parse JSON metadata tokens and send as proper event types
+                # Check if token is JSON metadata
                 if token.startswith("{") and '"type"' in token:
-                    import json as _json
-                    try:
-                        meta = _json.loads(token)
-                        if meta.get("type") == "rag_docs":
-                            yield {"event": "rag_docs", "data": _json.dumps(meta.get("documents", []))}
-                        elif meta.get("type") == "tool_call":
-                            yield {"event": "tool_call", "data": _json.dumps({"name": meta.get("name", ""), "result": meta.get("result", "")})}
-                        else:
-                            yield {"event": "metadata", "data": token}
-                    except Exception:
-                        yield {"event": "metadata", "data": token}
+                    yield {"event": "metadata", "data": token}
                 else:
                     full_answer += token
                     yield {"event": "token", "data": token}
@@ -251,10 +241,6 @@ async def chat_stream(request: ChatRequest, req: Request):
             msgs.append({"role": "assistant", "content": full_answer})
             entry["messages"] = msgs
             _save_history_store(_history_store)
-
-            # Send done event with conversation_id
-            import json as _json
-            yield {"event": "done", "data": _json.dumps({"conversation_id": cid, "full_answer": full_answer})}
 
         except Exception as e:
             logger.error(f"Stream error: {e}")
