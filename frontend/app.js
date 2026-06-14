@@ -797,7 +797,8 @@ var uploadedFiles = [];  // Track uploaded documents
         try {
             var headers = { "Content-Type": "application/json" };
             if (authToken) headers["Authorization"] = "Bearer " + authToken;
-            var chatBody = { message: text, conversation_id: conversationId, device_id: deviceId };
+            var var agMode = (document.getElementById("agentMode") && document.getElementById("agentMode").value) || "chat";
+            chatBody = { message: text, user_input: text, conversation_id: conversationId, device_id: deviceId, mode: agMode };
             if (sentDocIds.length > 0) chatBody.doc_ids = sentDocIds;
 
             // Clear doc tags after building chatBody (Gemini-style: hide upload window on dialog)

@@ -15,6 +15,8 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = Field(None, description="会话 ID")
     device_id: str | None = Field(None, description="匿名设备 ID")
     doc_ids: list[str] | None = Field(None, description="指定知识库文档ID列表")
+    mode: str | None = Field("chat", description="agent mode: chat/rag/tool/orchestrate")
+    user_input: str | None = Field(None, description="user input (alias for message)")
 
 
 class ChatResponse(BaseModel):

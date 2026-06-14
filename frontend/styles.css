@@ -1191,3 +1191,19 @@ html, body {
 .social-btn.wx { color: #07c160; }
 
 
+
+
+/* Mode selector bar */
+.mode-bar {
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px 0 0; max-width: var(--thread-content-max-width);
+    margin: 0 auto;
+}
+.mode-select {
+    padding: 4px 12px; background: var(--surface-secondary);
+    border: 1px solid var(--border-medium); border-radius: var(--radius-lg);
+    color: var(--text-secondary); font-size: 12px; cursor: pointer;
+    outline: none; transition: border-color var(--transition);
+}
+.mode-select:hover { border-color: var(--border-strong); }
+.mode-select:focus { border-color: var(--brand-purple); color: var(--text-primary); }

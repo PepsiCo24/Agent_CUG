@@ -126,7 +126,16 @@ class AgentWorkflow:
     async def _router(self, state: AgentState) -> dict[str, Any]:
         """路由器：分析用户意图"""
         user_input = state["user_input"]
-        logger.info(f"[Router] 分析用户输入: {user_input[:50]}...")
+        mode = state.get("mode", "chat")
+        logger.info(f"[Router] mode={mode}, input: {user_input[:50]}...")
+
+        # Mode-driven routing (mode takes priority)
+        if mode == "rag" or (state.get("doc_ids") and state.get("doc_ids")):
+            state["next_action"] = "rag"
+            return state
+        if mode == "tool" or mode == "orchestrate":
+            state["next_action"] = "tool"
+            return state
 
         # 简单规则路由
         input_lower = user_input.lower().strip()
@@ -224,6 +233,85 @@ class AgentWorkflow:
             })
 
         state["tool_calls"] = tool_calls
+        return state
+
+
+    async def _react_loop(self, state, max_iterations=5):
+        """ReAct: Thought -> Action -> Observation for multi-tool orchestration"""
+        user_input = state["user_input"]
+        obs = state.get("observations", [])
+        tcs = state.get("tool_calls", [])
+
+        tools_desc = "\n".join(
+            f"- {t.definition.name}: {t.definition.description}"
+            for t in self._tool_registry._tools.values()
+        )
+
+        react_prompt = f"""You are an AI agent using ReAct.
+
+Tools:
+{tools_desc}
+
+Task: {user_input}
+
+Format:
+Thought: [reasoning]
+Action: [tool_name]
+Action Input: {{JSON args}}
+Observation: [result]
+... (repeat)
+Final Answer: [answer in Chinese]
+
+Begin!"""
+
+        messages = [Message(role="system", content=react_prompt)]
+
+        for i in range(max_iterations):
+            logger.info(f"[ReAct] iter {i+1}/{max_iterations}")
+            try:
+                resp = await self._llm.chat(messages)
+                text = resp.content
+
+                if "Final Answer:" in text:
+                    state["final_answer"] = text.split("Final Answer:")[-1].strip()
+                    state["observations"] = obs
+                    state["tool_calls"] = tcs
+                    state["next_action"] = "chat"
+                    return state
+
+                am = re.search(r"Action:\s*(\w+)", text)
+                aim = re.search(r"Action Input:\s*(\{.+?\})", text, re.DOTALL)
+
+                if am:
+                    tn = am.group(1).strip()
+                    ta = {}
+                    if aim:
+                        try: ta = json.loads(aim.group(1))
+                        except: ta = {"query": user_input}
+
+                    result = await self._tool_registry.execute(tn, **ta)
+                    ot = f"[{tn}]: {result.output}"
+                    if result.error: ot = f"[{tn}] err: {result.error}"
+
+                    obs.append(ot)
+                    tcs.append({"name": tn, "args": ta, "result": ot})
+                    messages.append(Message(role="assistant", content=text))
+                    messages.append(Message(role="user", content=ot))
+                else:
+                    state["final_answer"] = text
+                    state["observations"] = obs
+                    state["tool_calls"] = tcs
+                    state["next_action"] = "chat"
+                    return state
+            except Exception as e:
+                logger.error(f"[ReAct] err: {e}")
+                obs.append(f"[Error] {e}")
+                break
+
+        state["final_answer"] = "[ReAct max iterations]\n" + "\n".join(obs)
+        state["observations"] = obs
+        state["tool_calls"] = tcs
+        state["next_action"] = "chat"
         return state
 
     async def _tool_execution(self, state: AgentState) -> dict[str, Any]:
@@ -326,7 +414,7 @@ class AgentWorkflow:
 
     # ---- 公共接口 ----
 
-    async def run(self, user_input: str, conversation_id: str | None = None, doc_ids: list[str] | None = None) -> AgentState:
+    async def run(self, user_input: str, conversation_id: str | None = None, doc_ids: list[str] | None = None, mode: str = "chat") -> AgentState:
         """运行工作流"""
         initial_state: AgentState = {
             "user_input": user_input,
@@ -348,7 +436,7 @@ class AgentWorkflow:
         return result
 
     async def run_stream(
-        self, user_input: str, conversation_id: str | None = None, doc_ids: list[str] | None = None
+        self, user_input: str, conversation_id: str | None = None, doc_ids: list[str] | None = None, mode: str = "chat"
     ) -> AsyncIterator[str]:
         """流式运行工作流"""
         # 先用同步模式执行检索和工具

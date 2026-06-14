@@ -16,6 +16,7 @@ class AgentState(TypedDict):
     user_input: str
     conversation_id: str | None
     doc_ids: list[str] | None
+    mode: str  # "chat" | "rag" | "tool" | "orchestrate"
 
     # 对话历史（使用 LangGraph 的 add_messages reducer）
     chat_history: Annotated[list[Any], add_messages]
