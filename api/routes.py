@@ -242,62 +242,16 @@ async def chat_stream(request: ChatRequest, req: Request):
             entry["messages"] = msgs
             _save_history_store(_history_store)
 
+            # Send conversation_id back to frontend
+            import json as _json
+            yield {"event": "done", "data": _json.dumps({"conversation_id": cid, "full_answer": full_answer})}
+
         except Exception as e:
             logger.error(f"Stream error: {e}")
             yield {"event": "error", "data": str(e)}
 
     return EventSourceResponse(event_generator())
 
-
-
-@router.post("/chat/stream")
-async def chat_stream(request: ChatRequest, req: Request):
-    if not request.message or not request.message.strip():
-        raise HTTPException(status_code=422, detail="message empty")
-    agent = get_agent()
-    cid = request.conversation_id or str(uuid.uuid4())
-    st, sid = _resolve_scope(req)
-    if st == "none" and request.device_id:
-        st, sid = "device", request.device_id
-
-    async def event_generator():
-        fa = ""
-        try:
-            _reload(); _migrate_legacy()
-            if cid not in _history_store:
-                _history_store[cid] = {"messages": [], "title": "", "_owner_type": st, "_owner_id": sid, "created_at": datetime.now(timezone.utc).isoformat()}
-            entry = _history_store[cid]
-            if isinstance(entry, list):
-                entry = {"messages": entry, "title": "", "_owner_type": st, "_owner_id": sid, "created_at": datetime.now(timezone.utc).isoformat()}
-                _history_store[cid] = entry
-            entry["messages"] = _gm(entry) + [{"role": "user", "content": request.message}]
-            _save_history_store(_history_store)
-            async for chunk in agent.run_stream(request.message, cid, doc_ids=request.doc_ids):
-                if chunk.startswith('{"type": "rag_docs"'):
-                    try:
-                        rd = _json.loads(chunk)
-                        yield {"event": "rag_docs", "data": _json.dumps(rd.get("documents", []))}
-                    except _json.JSONDecodeError: pass
-                elif chunk.startswith('{"type": "tool_call"'):
-                    try:
-                        tc = _json.loads(chunk)
-                        yield {"event": "tool_call", "data": _json.dumps({"name": tc.get("name","?"), "arguments": tc.get("arguments",{})})}
-                    except _json.JSONDecodeError: pass
-                else:
-                    fa += chunk
-                    yield {"event": "token", "data": chunk}
-            _reload()
-            entry = _history_store.get(cid)
-            if entry:
-                msgs = _gm(entry)
-                msgs.append({"role": "assistant", "content": fa})
-                entry["messages"] = msgs
-                _save_history_store(_history_store)
-            yield {"event": "done", "data": _json.dumps({"conversation_id": cid, "full_answer": fa})}
-        except Exception as e:
-            logger.error(f"Stream error: {e}")
-            yield {"event": "error", "data": str(e)}
-    return EventSourceResponse(event_generator())
 
 
 @router.post("/rag/query", response_model=RAGQueryResponse)
