@@ -130,6 +130,19 @@ class AgentWorkflow:
         logger.info(f"[Router] mode={mode}, input: {user_input[:50]}...")
 
         # Mode-driven routing (mode takes priority)
+        # Auto-detect mode from user intent when mode is "auto" or "chat"
+        if mode in ("auto", "chat"):
+            # Analyze user intent for auto-routing
+            intent = await self._analyze_intent(user_input)
+            if intent == "tool":
+                state["next_action"] = "tool"
+                return state
+            if intent == "rag" or self._rag.document_count > 0:
+                state["next_action"] = "rag"
+                return state
+            state["next_action"] = "chat"
+            return state
+
         if mode == "rag" or (state.get("doc_ids") and state.get("doc_ids")):
             state["next_action"] = "rag"
             return state
@@ -235,6 +248,41 @@ class AgentWorkflow:
         state["tool_calls"] = tool_calls
         return state
 
+
+    async def _analyze_intent(self, user_input: str) -> str:
+        """Analyze user input to determine best agent mode"""
+        input_lower = user_input.lower().strip()
+
+        # Tool-related keywords
+        tool_keywords = [
+            "计算", "算", "时间", "几点", "日期", "星期",
+            "天气", "气温", "温度", "下雨",
+            "搜索", "查一下", "帮我搜", "找一下", "查找",
+            "执行", "运行", "命令",
+            "draw", "画", "图片", "生成图"
+        ]
+        for kw in tool_keywords:
+            if kw in input_lower:
+                return "tool"
+
+        # RAG-related keywords
+        rag_keywords = [
+            "文档", "资料", "知识库", "文件", "检索",
+            "根据文档", "基于资料", "查文档",
+            "上传的文件", "我上传的"
+        ]
+        for kw in rag_keywords:
+            if kw in input_lower:
+                return "rag"
+
+        # If knowledge base has documents, try RAG for informational queries
+        if self._rag.document_count > 0:
+            info_keywords = ["什么", "如何", "怎么", "为什么", "介绍", "说明", "定义", "解释"]
+            for kw in info_keywords:
+                if kw in input_lower:
+                    return "rag"
+
+        return "chat"
 
     async def _react_loop(self, state, max_iterations=5):
         """ReAct: Thought -> Action -> Observation for multi-tool orchestration"""
