@@ -868,7 +868,7 @@ var uploadedFiles = [];  // Track uploaded documents
                         // Fallback: use full_answer if streaming produced no tokens
                         if (!fullText && payload.full_answer) {
                             fullText = payload.full_answer;
-                            if (contentEl) contentEl.innerHTML = renderFinal(fullText, toolCalls);
+                            if (contentEl2) contentEl2.innerHTML = renderFinal(fullText, toolCalls);
                         }
                     } catch (e) {}
                 } else if (event === "error") {
@@ -882,6 +882,8 @@ var uploadedFiles = [];  // Track uploaded documents
                 if (ragDocs.length > 0) renderRagDocsBar(assistantRow, ragDocs, sentDocNames);
                 fullText = cleanText(fullText);
                 contentEl.innerHTML = renderFinal(fullText, toolCalls);
+                // Force reflow to ensure content renders immediately
+                void contentEl.offsetHeight;
             }
             messages.push({ role: "assistant", content: fullText });
 
@@ -895,6 +897,7 @@ var uploadedFiles = [];  // Track uploaded documents
         isStreaming = false;
         sendBtn.disabled = false;
         messageInput.focus();
+        loadHistory();
 
 
         scrollToBottom();
@@ -1407,6 +1410,7 @@ function renderFinal(text, toolCalls) {
                             contentEl2.classList.remove("streaming-cursor");
                             fullText = fullText.replace(/(\d) (\d)/g, "$1$2");
                             contentEl2.innerHTML = renderFinal(fullText, toolCalls);
+                            void contentEl2.offsetHeight;
                         }
                         messages.push({ role: "assistant", content: fullText });
                         loadHistory();
@@ -1459,7 +1463,7 @@ function renderFinal(text, toolCalls) {
                         // Fallback: use full_answer if streaming produced no tokens
                         if (!fullText && payload.full_answer) {
                             fullText = payload.full_answer;
-                            if (contentEl) contentEl.innerHTML = renderFinal(fullText, toolCalls);
+                            if (contentEl2) contentEl2.innerHTML = renderFinal(fullText, toolCalls);
                         }
                     } catch (e) {}
                 } else if (event === "error") {

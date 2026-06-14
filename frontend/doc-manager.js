@@ -57,6 +57,7 @@ function renderDocList() {
             var docId = item.dataset.id;
             var action = this.dataset.action;
             if (action === "delete") deleteDocument(docId, item);
+            else if (action === "rename") renameDocument(docId, item);
         });
     }
 }
@@ -84,6 +85,26 @@ async function deleteDocument(docId, itemEl) {
         if (loadedDocs.length === 0) renderDocList();
     } catch (e) { alert("删除失败: " + e.message); }
 }
+async function renameDocument(docId, itemEl) {
+    var doc = loadedDocs.find(function(d) { return d.id === docId; });
+    var currentName = doc ? doc.filename : "";
+    var newName = prompt("请输入新文件名：", currentName);
+    if (!newName || newName.trim() === "" || newName.trim() === currentName) return;
+    try {
+        var resp = await fetchWithAuth("/api/rag/documents/" + docId + "/rename", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: newName.trim() })
+        });
+        if (!resp.ok) throw new Error("重命名失败");
+        for (var i = 0; i < loadedDocs.length; i++) {
+            if (loadedDocs[i].id === docId) { loadedDocs[i].filename = newName.trim(); break; }
+        }
+        renderDocList();
+        renderDocSelector();
+    } catch (e) { alert("重命名失败: " + e.message); }
+}
+
 
 
 // ====== 文档选择器 ======
