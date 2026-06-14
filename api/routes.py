@@ -455,6 +455,24 @@ async def list_documents(req: Request):
     return {"documents": docs, "total": len(docs)}
 
 
+
+@router.put("/rag/documents/{doc_id}/rename")
+async def rename_document(doc_id: str, body: dict, req: Request):
+    """Rename a document"""
+    st, sid = _resolve_scope(req)
+    _reload_docs()
+    d = _doc_store.get(doc_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="document not found")
+    if d.get("_owner_type") != st or d.get("_owner_id") != sid:
+        raise HTTPException(status_code=403, detail="permission denied")
+    new_name = body.get("filename", "").strip()
+    if not new_name:
+        raise HTTPException(status_code=422, detail="filename empty")
+    d["filename"] = new_name
+    _save_doc_store(_doc_store)
+    return {"status": "ok", "doc_id": doc_id, "filename": new_name}
+
 @router.delete("/rag/documents/{doc_id}")
 async def delete_document(doc_id: str, req: Request):
     """Delete a document and its chunks"""

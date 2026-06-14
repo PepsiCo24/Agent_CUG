@@ -442,7 +442,7 @@ var uploadedFiles = [];  // Track uploaded documents
 
     var _loadingHistory = false;
     async function loadHistory() {
-        if (_loadingHistory) return;
+        if (_loadingHistory || isStreaming) return;
         _loadingHistory = true;
         try {
             var resp = await fetchWithAuth("/api/history?device_id=" + encodeURIComponent(deviceId));
@@ -659,6 +659,7 @@ var uploadedFiles = [];  // Track uploaded documents
     // ====== ???? ======
     async function loadConversation(convId) {
         if (!convId) return;
+        switchPanel("chat");
         try {
             var resp = await fetch("/api/history/" + convId, {
                 headers: authToken ? { "Authorization": "Bearer " + authToken } : {}
@@ -883,7 +884,6 @@ var uploadedFiles = [];  // Track uploaded documents
                 contentEl.innerHTML = renderFinal(fullText, toolCalls);
             }
             messages.push({ role: "assistant", content: fullText });
-            loadHistory();
 
         } catch (error) {
             if (contentEl) {
@@ -1694,7 +1694,7 @@ function renderDocList() {
             var item = this.closest(".doc-list-item");
             var docId = item.dataset.id;
             var action = this.dataset.action;
-            if (action === "delete") deleteDocument(docId, item);
+            if (action === "delete") { deleteDocument(docId, item); } else if (action === "rename") { renameDocument(docId); }
         });
     }
 }
@@ -1707,6 +1707,19 @@ function getDocIcon(filename) {
     if (ext === "txt") return "\u{1F4C4}";
     return "\u{1F4CE}";
 }
+
+    async function renameDocument(docId) {
+        var newName = prompt("请输入新文件名:");
+        if (!newName) return;
+        try {
+            var resp = await fetchWithAuth("/api/rag/documents/" + docId + "/rename", {
+                method: "PUT",
+                body: JSON.stringify({ filename: newName })
+            });
+            if (!resp.ok) throw new Error("重命名失败");
+            loadDocList();
+        } catch (e) { alert("重命名失败: " + e.message); }
+    }
 
 async function deleteDocument(docId, itemEl) {
     if (!confirm("确定要删除这个文档吗？此操作不可撤销。")) return;
