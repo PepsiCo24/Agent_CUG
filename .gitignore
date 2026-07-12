@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build output
+target/
+frontend/dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Java
+*.class
+*.jar
+*.war
+
+# Logs
+*.log
+
+# Data
+backend/data/
+backend/uploads/
+
+# Temp
+tmp/
+temp/
+# Startup scripts (contain API keys)
+start-all.bat
+rag-gateway/start_with_env.bat
+
+# Qdrant data
+rag-gateway/qdrant-data/
+
+# Python cache
+rag-gateway/__pycache__/
+__pycache__/
+*.pyc
+
+# Test files
+rag-gateway/_*.py
+token.txt
+rag-gateway/start.bat

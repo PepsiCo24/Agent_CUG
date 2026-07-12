@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  # ========== Qdrant 向量数据库 ==========
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: agentcug-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      - ./qdrant-storage:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========== Docling 文档解析服务 ==========
+  docling:
+    image: quay.io/docling-project/docling-serve:latest
+    container_name: agentcug-docling
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      DOCLING_SERVE_PORT: 5001
+      DOCLING_SERVE_HOST: 0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ========== AnythingLLM RAG 引擎 ==========
+  anythingllm:
+    image: mintplexlabs/anythingllm:latest
+    container_name: agentcug-anythingllm
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./anythingllm-storage:/app/server/storage
+      - ./anythingllm.env:/app/server/.env
+    environment:
+      STORAGE_DIR: /app/server/storage
+      SERVER_PORT: 3001
+      # Qdrant 配置
+      VECTOR_DB: qdrant
+      QDRANT_ENDPOINT: http://qdrant:6333
+      # DeepSeek 配置
+      LLM_PROVIDER: deepseek
+      # Embedding 配置
+      EMBEDDING_ENGINE: native
+      EMBEDDING_MODEL_PREF: BAAI/bge-m3
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+networks:
+  default:
+    name: agentcug-network
