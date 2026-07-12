@@ -12,13 +12,18 @@ class SPAHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.translate_path(self.path)
-        # If the requested file doesn't exist, serve index.html (SPA fallback)
         if not os.path.exists(path) or os.path.isdir(path):
             self.path = '/index.html'
         return super().do_GET()
 
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        super().end_headers()
+
     def log_message(self, format, *args):
-        print(f"[SPA] {args[0]}")
+        print(f"[SPA {self.client_address[0]}] {args[0]}")
 
 if __name__ == '__main__':
     print(f"SPA Server running on http://localhost:{PORT}")

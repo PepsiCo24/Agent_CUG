@@ -83,24 +83,23 @@ public class DocumentProcessingService {
         boolean isBinaryFormat = "PDF".equals(fileType) || "WORD".equals(fileType);
 
         if (isBinaryFormat) {
-            // Chain: Docling API → RAG Gateway parse
-            return doclingClient.parseDocument(filePath)
+            // Chain: RAG Gateway parse (primary) -> Docling fallback -> direct read
+            return ragGatewayClient.parseDocument(filePath, fileType)
+                    .onErrorResume(e -> {
+                        log.warn("RAG Gateway parse failed: {}, trying Docling", e.getMessage());
+                        return doclingClient.parseDocument(filePath);
+                    })
                     .onErrorResume(e -> {
                         log.warn("Docling /api/v1/parse unavailable: {}", e.getMessage());
                         return doclingClient.parse(filePath);
                     })
                     .onErrorResume(e -> {
-                        log.warn("Docling /v1/convert/file unavailable: {}", e.getMessage());
-                        log.info("Falling back to RAG Gateway parse for {}", fileType);
-                        return ragGatewayClient.parseDocument(filePath, fileType);
-                    })
-                    .onErrorResume(e -> {
-                        log.error("RAG Gateway parse failed: {}", e.getMessage());
+                        log.error("All parse methods failed: {}", e.getMessage());
                         return readFileAsMarkdown(doc);
                     })
                     .block();
         } else {
-            // For plain text: Docling → direct read
+            // For plain text: Docling 鈫?direct read
             return doclingClient.parseDocument(filePath)
                     .onErrorResume(e -> {
                         log.warn("Docling unavailable for text file: {}", e.getMessage());

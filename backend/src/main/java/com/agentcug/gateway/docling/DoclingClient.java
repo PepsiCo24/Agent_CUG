@@ -26,6 +26,7 @@ public class DoclingClient {
                          ObjectMapper objectMapper) {
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024))
                 .build();
     }
 
@@ -50,7 +51,7 @@ public class DoclingClient {
                     }
                     return node.toString();
                 })
-                .doOnError(e -> log.error("Docling 解析失败: {}", e.getMessage()));
+                .doOnError(e -> log.error("Docling 瑙ｆ瀽澶辫触: {}", e.getMessage()));
     }
 
     public Mono<String> parse(String filePath) {
@@ -64,6 +65,6 @@ public class DoclingClient {
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .map(node -> node.path("document").path("text").asText(""))
-                .doOnError(e -> log.error("Docling 解析失败: {}", e.getMessage()));
+                .doOnError(e -> log.error("Docling 瑙ｆ瀽澶辫触: {}", e.getMessage()));
     }
 }
