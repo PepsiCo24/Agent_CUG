@@ -2,7 +2,8 @@ import axios from "axios";
 import type { ApiResponse } from "@/types";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
+  // 生产环境由 Nginx 将 /api 反向代理到 Spring Boot，避免公网客户端错误访问自身 localhost。
+  baseURL: "/api",
   timeout: 60000,
 });
 
